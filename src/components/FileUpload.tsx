@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useDropzone } from 'react-dropzone'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -14,7 +15,14 @@ const ACCEPTED_FILE_TYPES = {
 	'audio/flac': ['.flac'],
 }
 
+interface FileUploadResponse {
+	success: boolean
+	sessionId: string
+	message: string
+}
+
 export function FileUpload() {
+	const router = useRouter()
 	const [selectedFile, setSelectedFile] = useState<File | null>(null)
 	const [isProcessing, setIsProcessing] = useState(false)
 	const [error, setError] = useState<string | null>(null)
@@ -26,60 +34,67 @@ export function FileUpload() {
 		setError(null)
 	}, [])
 
-	const onDrop = useCallback(async (acceptedFiles: File[], rejectedFiles: any[]) => {
-		// Clear any previous errors when attempting a new upload
-		setError(null)
+	const onDrop = useCallback(
+		async (acceptedFiles: File[], rejectedFiles: any[]) => {
+			// Clear any previous errors when attempting a new upload
+			setError(null)
 
-		if (rejectedFiles.length > 0) {
-			const error = rejectedFiles[0].errors[0]
-			if (error.code === 'file-too-large') {
-				toast.error('File is too large. Maximum size is 10MB.')
-			} else if (error.code === 'file-invalid-type') {
-				toast.error('Invalid file type. Please upload MP3, WAV, or FLAC files only.')
-			} else {
-				toast.error('Error uploading file. Please try again.')
-			}
-			return
-		}
-
-		if (acceptedFiles.length > 0) {
-			const file = acceptedFiles[0]
-			setSelectedFile(file)
-			setIsProcessing(true)
-
-			try {
-				// Create FormData and append the file
-				const formData = new FormData()
-				formData.append('audioFile', file)
-
-				// Send to API endpoint
-				const response = await fetch('/api/audio-analysis', {
-					method: 'POST',
-					body: formData,
-				})
-
-				if (!response.ok) {
-					throw new Error(`Upload failed: ${response.statusText}`)
+			if (rejectedFiles.length > 0) {
+				const error = rejectedFiles[0].errors[0]
+				if (error.code === 'file-too-large') {
+					toast.error('File is too large. Maximum size is 10MB.')
+				} else if (error.code === 'file-invalid-type') {
+					toast.error('Invalid file type. Please upload MP3, WAV, or FLAC files only.')
+				} else {
+					toast.error('Error uploading file. Please try again.')
 				}
-
-				// Process successful response
-				const data = await response.json()
-				console.log('Analysis result:', data)
-
-				// Navigate to the analysis page with the results
-				// router.push('/analysis')
-
-				// Keep processing state active for 1 second to show the UI, for testing purposes
-				setTimeout(() => {
-					setIsProcessing(false)
-				}, 1000)
-			} catch (err) {
-				console.error('Error uploading file:', err)
-				setError('Failed to process the file. Please try again.')
-				setIsProcessing(false)
+				return
 			}
-		}
-	}, [])
+
+			if (acceptedFiles.length > 0) {
+				const file = acceptedFiles[0]
+				setSelectedFile(file)
+				setIsProcessing(true)
+
+				try {
+					// Create FormData and append the file
+					const formData = new FormData()
+					formData.append('audioFile', file)
+
+					// Send to API endpoint
+					const response = await fetch('/api/audio-analysis-upload', {
+						method: 'POST',
+						body: formData,
+					})
+
+					if (!response.ok) {
+						throw new Error(`Upload failed: ${response.statusText}`)
+					}
+
+					// Process successful response
+					const data: FileUploadResponse = await response.json()
+					console.log('Analysis result:', data)
+
+					if (data.success) {
+						// Navigate to the analysis page with the results
+						router.push(`/analysis?sessionId=${data.sessionId}`)
+					} else {
+						throw new Error(data.message)
+					}
+
+					// Keep processing state active for 1 second to show the UI, for testing purposes
+					setTimeout(() => {
+						setIsProcessing(false)
+					}, 1000)
+				} catch (err) {
+					console.error('Error uploading file:', err)
+					setError('Failed to process the file. Please try again.')
+					setIsProcessing(false)
+				}
+			}
+		},
+		[router]
+	)
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
 		onDrop,

@@ -32,7 +32,7 @@ export interface PipelineNode<Input = any, Output = any> {
 /**
  * Main pipeline class that orchestrates execution of nodes
  */
-export class Pipeline<FinalOutput = any> {
+export class DAGPipeline<FinalOutput = any> {
 	// Map of all registered nodes
 	private nodes: Map<string, PipelineNode> = new Map()
 	// Store entry point node ID
@@ -43,7 +43,7 @@ export class Pipeline<FinalOutput = any> {
 	 * @param node - The node to register
 	 * @returns The pipeline instance for chaining
 	 */
-	addNode<I, O>(node: PipelineNode<I, O>): Pipeline<FinalOutput> {
+	addNode<I, O>(node: PipelineNode<I, O>): DAGPipeline<FinalOutput> {
 		// Check for duplicate node ID
 		if (this.nodes.has(node.id)) {
 			throw new Error(`Node with ID ${node.id} already exists`)
@@ -60,7 +60,7 @@ export class Pipeline<FinalOutput = any> {
 	 * @param nodeId - ID of the entry node
 	 * @returns The pipeline instance for chaining
 	 */
-	setEntryNode(nodeId: string): Pipeline<FinalOutput> {
+	setEntryNode(nodeId: string): DAGPipeline<FinalOutput> {
 		// Verify node exists
 		if (!this.nodes.has(nodeId)) {
 			throw new Error(`Node with ID ${nodeId} does not exist`)

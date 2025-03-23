@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { v4 as uuidv4 } from 'uuid'
+import { getAudioPipeline } from '@/lib/AudioPipeline/AudioPipeline'
 
 export async function POST(request: NextRequest) {
 	try {
@@ -12,26 +14,23 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: 'No audio file provided' }, { status: 400 })
 		}
 
-		// Log the file name
-		console.log('Received audio file:', audioFile.name)
+		// Generate a session ID
+		const sessionId = uuidv4()
 
-		// Log file details for debugging
-		console.log('File size:', audioFile.size, 'bytes')
-		console.log('File type:', audioFile.type)
+		// Get the singleton pipeline instance
+		const pipeline = getAudioPipeline()
 
-		// process the audio file here
+		// Start the pipeline in the background with our pre-generated sessionId
+		// We don't await this - it runs in the background
+		pipeline.execute({ file: audioFile, sessionId }).catch((error) => {
+			console.error('Background pipeline processing error:', error)
+		})
 
-		// for now, just returning a success response with some mock data
+		// Return the session ID immediately
 		return NextResponse.json({
 			success: true,
-			fileName: audioFile.name,
-			message: 'File processed successfully',
-			mockResults: {
-				duration: 120, // seconds
-				format: audioFile.type,
-				fileSize: audioFile.size,
-				timestamp: new Date().toISOString(),
-			},
+			sessionId,
+			message: 'File upload successful. Processing started.',
 		})
 	} catch (error) {
 		console.error('Error processing audio file:', error)
