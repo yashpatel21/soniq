@@ -1,5 +1,6 @@
 import decode from 'audio-decode'
 import { DecodedAudio } from './types'
+import * as fs from 'fs/promises'
 
 /**
  * Decodes audio file using audio-decode library
@@ -85,4 +86,23 @@ export function normalizeAudio(audioData: Float32Array): Float32Array {
 
 	console.log(`Audio normalized with scale factor: ${scaleFactor.toFixed(4)}`)
 	return normalizedData
+}
+
+/**
+ * Decodes audio file from a file path
+ * @param filePath - Path to the audio file to decode
+ * @returns A promise resolving to a decoded audio with metadata
+ */
+export async function decodeAudioFromFile(filePath: string): Promise<DecodedAudio> {
+	try {
+		// Read the file into a buffer
+		const fileBuffer = await fs.readFile(filePath)
+		console.log(`Read audio file: ${filePath} (${fileBuffer.length} bytes)`)
+
+		// Use the existing decodeAudioBuffer function to process the file
+		return await decodeAudioBuffer(fileBuffer)
+	} catch (error) {
+		console.error(`Error processing audio file ${filePath}:`, error)
+		throw error
+	}
 }
