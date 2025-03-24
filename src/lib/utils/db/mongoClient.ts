@@ -28,12 +28,13 @@ declare global {
 	var mongodb: {
 		client?: MongoClient
 		clientPromise?: Promise<MongoClient>
-		isInitialized: boolean
 	}
 }
 
 // Initialize the global variable if it doesn't exist
-global.mongodb = global.mongodb || { isInitialized: false }
+if (!global.mongodb) {
+	global.mongodb = {}
+}
 
 let clientPromise: Promise<MongoClient>
 
@@ -48,20 +49,14 @@ if (!global.mongodb.clientPromise) {
 			// Store the connected client
 			global.mongodb.client = connectedClient
 
-			// Only log once when initializing for the first time
-			if (!global.mongodb.isInitialized) {
-				console.log('MongoDB connection pool initialized')
-				global.mongodb.isInitialized = true
-
-				// Set up cleanup handler on application shutdown
-				process.on('SIGINT', async () => {
-					if (global.mongodb.client) {
-						await global.mongodb.client.close()
-						console.log('MongoDB connection pool closed')
-					}
-					process.exit(0)
-				})
-			}
+			// Set up cleanup handler on application shutdown
+			process.on('SIGINT', async () => {
+				if (global.mongodb.client) {
+					await global.mongodb.client.close()
+					console.log('MongoDB connection closed')
+				}
+				process.exit(0)
+			})
 
 			return connectedClient
 		})
