@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAudioSessionsCollection } from '@/lib/db/audioSessionCollection'
+import { getAudioSessionsCollection } from '@/lib/utils/db/audioSessionCollection'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ sessionId: string }> }) {
 	try {

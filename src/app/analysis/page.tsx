@@ -4,8 +4,8 @@ import { useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 
-interface EssentiaData {
-	essentiaAnalysis?: {
+interface AudioAnalysisData {
+	analysisResults?: {
 		bpm: number
 		key: string
 		scale: string
@@ -24,19 +24,19 @@ export default function AnalysisPage() {
 	const searchParams = useSearchParams()
 	const sessionId = searchParams.get('sessionId')
 
-	// Query for Essentia analysis data
-	const essentiaQuery = useQuery({
-		queryKey: ['essentia', sessionId],
-		queryFn: async (): Promise<EssentiaData> => {
-			const response = await fetch(`/api/session/${sessionId}/essentia`)
+	// Query for audio analysis data
+	const analysisQuery = useQuery({
+		queryKey: ['audio-analysis', sessionId],
+		queryFn: async (): Promise<AudioAnalysisData> => {
+			const response = await fetch(`/api/session/${sessionId}/audio-analysis`)
 			if (!response.ok) {
-				throw new Error('Failed to fetch Essentia data')
+				throw new Error('Failed to fetch audio analysis data')
 			}
 			return response.json()
 		},
 		// Keep polling until we get completed or failed status
 		refetchInterval: (query) => {
-			const data = query.state.data as EssentiaData
+			const data = query.state.data as AudioAnalysisData
 			return data?.status === 'completed' || data?.status === 'failed' ? false : 3000
 		},
 		enabled: !!sessionId,
@@ -62,14 +62,14 @@ export default function AnalysisPage() {
 
 	// Log the results once available
 	useEffect(() => {
-		if (essentiaQuery.data?.status === 'completed' && essentiaQuery.data?.essentiaAnalysis) {
-			console.log('Essentia Analysis Results:', essentiaQuery.data.essentiaAnalysis)
+		if (analysisQuery.data?.status === 'completed' && analysisQuery.data?.analysisResults) {
+			console.log('Audio Analysis Results:', analysisQuery.data.analysisResults)
 		}
 
 		if (stemsQuery.data?.status === 'completed' && stemsQuery.data?.stems) {
 			console.log('Stems Results:', stemsQuery.data.stems)
 		}
-	}, [essentiaQuery.data, stemsQuery.data])
+	}, [analysisQuery.data, stemsQuery.data])
 
 	if (!sessionId) {
 		return <div className="p-8">Session ID is required</div>
@@ -80,30 +80,30 @@ export default function AnalysisPage() {
 			<h1 className="text-2xl font-bold mb-6">Analysis Results</h1>
 
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-				{/* Essentia Analysis Box */}
+				{/* Audio Analysis Box */}
 				<div className="border rounded-lg p-6">
 					<h2 className="text-xl font-semibold mb-4">Audio Analysis</h2>
 
-					{essentiaQuery.isLoading && <p>Loading analysis data...</p>}
+					{analysisQuery.isLoading && <p>Loading analysis data...</p>}
 
-					{essentiaQuery.isError && <p className="text-red-500">Error loading analysis data</p>}
+					{analysisQuery.isError && <p className="text-red-500">Error loading analysis data</p>}
 
-					{essentiaQuery.data && (
+					{analysisQuery.data && (
 						<div>
-							<p>Status: {essentiaQuery.data.status}</p>
+							<p>Status: {analysisQuery.data.status}</p>
 
-							{essentiaQuery.data.status === 'completed' && essentiaQuery.data.essentiaAnalysis && (
+							{analysisQuery.data.status === 'completed' && analysisQuery.data.analysisResults && (
 								<div className="mt-4 space-y-2">
-									<p>BPM: {essentiaQuery.data.essentiaAnalysis.bpm.toFixed(1)}</p>
+									<p>BPM: {analysisQuery.data.analysisResults.bpm.toFixed(1)}</p>
 									<p>
-										Key: {essentiaQuery.data.essentiaAnalysis.key} {essentiaQuery.data.essentiaAnalysis.scale}
+										Key: {analysisQuery.data.analysisResults.key} {analysisQuery.data.analysisResults.scale}
 									</p>
 								</div>
 							)}
 
-							{essentiaQuery.data.status === 'processing' && <p>Processing your audio...</p>}
+							{analysisQuery.data.status === 'processing' && <p>Processing your audio...</p>}
 
-							{essentiaQuery.data.status === 'failed' && <p className="text-red-500">Analysis failed</p>}
+							{analysisQuery.data.status === 'failed' && <p className="text-red-500">Analysis failed</p>}
 						</div>
 					)}
 				</div>

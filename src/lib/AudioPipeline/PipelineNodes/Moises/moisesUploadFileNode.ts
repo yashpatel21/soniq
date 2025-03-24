@@ -1,7 +1,7 @@
-import { NodeBuilder, PipelineNode } from '../../../DAGPipeline/DAGPipeline'
+import { NodeBuilder, PipelineNode } from '../../../utils/DAGPipeline/DAGPipeline'
 import { ProcessedAudioFile, MoisesUploadResult } from '../types'
-import moisesClient from './moisesClient'
-import { updateComponentProgress } from '../../../db/audioSessionCollection'
+import moisesClient from '../../../utils/moises/moisesClient'
+import { updateComponentProgress } from '../../../utils/db/audioSessionCollection'
 
 /**
  * Pipeline node that uploads an audio file to Moises

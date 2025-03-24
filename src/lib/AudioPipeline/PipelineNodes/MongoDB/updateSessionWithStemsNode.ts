@@ -1,6 +1,6 @@
-import { NodeBuilder, PipelineNode } from '../../../DAGPipeline/DAGPipeline'
+import { NodeBuilder, PipelineNode } from '../../../utils/DAGPipeline/DAGPipeline'
 import { MoisesStemsJobResult, ProcessedAudioFile } from '../types'
-import { updateComponentProgress, updateSessionWithStems as updateSessionWithStemsInDB } from '../../../db/audioSessionCollection'
+import { updateComponentProgress, updateSessionWithStems as updateSessionWithStemsInDB } from '../../../utils/db/audioSessionCollection'
 
 /**
  * Updates the MongoDB session document with Moises stems file paths

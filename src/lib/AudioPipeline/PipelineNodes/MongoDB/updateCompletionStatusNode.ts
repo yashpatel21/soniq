@@ -1,6 +1,6 @@
-import { createMergeNode } from '../../../DAGPipeline/DAGPipeline'
+import { createMergeNode } from '../../../utils/DAGPipeline/DAGPipeline'
 import { EssentiaAnalysisResult, MoisesStemsJobResult, ProcessedAudioFile } from '../types'
-import { AudioSession, ProcessingProgress, getAudioSessionsCollection, updateSessionStatus } from '../../../db/audioSessionCollection'
+import { AudioSession, ProcessingProgress, getAudioSessionsCollection, updateSessionStatus } from '../../../utils/db/audioSessionCollection'
 
 /**
  * Compares two numerical values with a small tolerance for floating point imprecision
@@ -37,11 +37,13 @@ async function verifySessionData(
 		return { verified: false, mismatches: ['Session document not found'] }
 	}
 
-	// First check if both essentia and stems processing are marked as completed
-	if (sessionDoc.progress.essentia !== 'completed' || sessionDoc.progress.stems !== 'completed') {
+	// First check if both audio-analysis and stems processing are marked as completed
+	if (sessionDoc.progress['audio-analysis'] !== 'completed' || sessionDoc.progress.stems !== 'completed') {
 		return {
 			verified: false,
-			mismatches: [`Incomplete processing: Essentia (${sessionDoc.progress.essentia}), Stems (${sessionDoc.progress.stems})`],
+			mismatches: [
+				`Incomplete processing: Audio Analysis (${sessionDoc.progress['audio-analysis']}), Stems (${sessionDoc.progress.stems})`,
+			],
 		}
 	}
 

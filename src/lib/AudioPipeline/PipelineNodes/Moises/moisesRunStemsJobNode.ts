@@ -1,8 +1,8 @@
 import { Job } from 'moises/sdk'
-import { NodeBuilder, PipelineNode } from '../../../DAGPipeline/DAGPipeline'
+import { NodeBuilder, PipelineNode } from '../../../utils/DAGPipeline/DAGPipeline'
 import { MoisesUploadResult } from '../types'
-import moisesClient from './moisesClient'
-import { updateComponentProgress } from '../../../db/audioSessionCollection'
+import moisesClient from '../../../utils/moises/moisesClient'
+import { updateComponentProgress } from '../../../utils/db/audioSessionCollection'
 
 /**
  * Pipeline node that runs a Moises stems job

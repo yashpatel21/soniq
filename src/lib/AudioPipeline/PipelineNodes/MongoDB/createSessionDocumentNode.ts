@@ -1,6 +1,6 @@
-import { NodeBuilder, PipelineNode } from '../../../DAGPipeline/DAGPipeline'
+import { NodeBuilder, PipelineNode } from '../../../utils/DAGPipeline/DAGPipeline'
 import { ProcessedAudioFile } from '../types'
-import { createAudioSession } from '../../../db/audioSessionCollection'
+import { createAudioSession } from '../../../utils/db/audioSessionCollection'
 
 /**
  * Creates an initial MongoDB document for the audio processing session

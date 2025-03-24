@@ -1,13 +1,13 @@
-import { DAGPipeline } from '../DAGPipeline/DAGPipeline'
-import { processInputAudioNode } from './PipelineNodes/processInputAudioNode'
-import { createSessionDocumentNode } from './PipelineNodes/MongoDB/createSessionDocumentNode'
-import { essentiaAnalysisNode } from './PipelineNodes/essentiaAnalysisNode'
-import { updateSessionWithEssentiaNode } from './PipelineNodes/MongoDB/updateSessionWithEssentiaNode'
-import { moisesUploadFileNode } from './PipelineNodes/Moises/moisesUploadFileNode'
-import { moisesRunStemsJobNode } from './PipelineNodes/Moises/moisesRunStemsJobNode'
-import { moisesDownloadStemsJobResultsNode } from './PipelineNodes/Moises/moisesDownloadStemsJobResultsNode'
-import { updateSessionWithStemsNode } from './PipelineNodes/MongoDB/updateSessionWithStemsNode'
-import { updateCompletionStatusNode } from './PipelineNodes/MongoDB/updateCompletionStatusNode'
+import { DAGPipeline } from '../utils/DAGPipeline/DAGPipeline'
+import { processInputAudioNode, prepareAudioNode } from './PipelineNodes/AudioProcessing'
+import { essentiaAnalysisNode } from './PipelineNodes/AudioAnalysis'
+import {
+	createSessionDocumentNode,
+	updateSessionWithEssentiaNode,
+	updateSessionWithStemsNode,
+	updateCompletionStatusNode,
+} from './PipelineNodes/MongoDB'
+import { moisesUploadFileNode, moisesRunStemsJobNode, moisesDownloadStemsJobResultsNode } from './PipelineNodes/Moises'
 
 // Singleton instance
 let audioPipelineInstance: DAGPipeline | null = null
@@ -19,6 +19,9 @@ function initializeAudioPipeline(): DAGPipeline {
 	// Add initial processing nodes
 	pipeline.addNode(processInputAudioNode)
 	pipeline.addNode(createSessionDocumentNode)
+
+	// Add audio preparation node
+	pipeline.addNode(prepareAudioNode)
 
 	// Add Essentia analysis branch
 	pipeline.addNode(essentiaAnalysisNode)
@@ -56,9 +59,4 @@ export function getAudioPipeline(): DAGPipeline {
 	}
 
 	return audioPipelineInstance
-}
-
-// For backward compatibility
-export function createAudioPipeline(): DAGPipeline {
-	return getAudioPipeline()
 }

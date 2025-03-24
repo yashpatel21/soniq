@@ -6,7 +6,7 @@ export type SessionStatus = 'processing' | 'completed' | 'failed'
 
 // Progress tracking for different pipeline components
 export interface ProcessingProgress {
-	essentia: 'pending' | 'processing' | 'completed' | 'failed'
+	'audio-analysis': 'pending' | 'processing' | 'completed' | 'failed'
 	stems: 'pending' | 'processing' | 'completed' | 'failed'
 }
 
@@ -24,7 +24,7 @@ export interface AudioSession {
 	// Last update timestamp
 	updatedAt: Date
 
-	// Essentia analysis results (added later)
+	// Audio analysis results (added later)
 	essentiaAnalysis?: {
 		bpm: number
 		key: string
@@ -52,7 +52,7 @@ export async function createAudioSession(sessionData: Omit<AudioSession, '_id' |
 		...sessionData,
 		status: 'processing',
 		progress: {
-			essentia: 'pending',
+			'audio-analysis': 'pending',
 			stems: 'pending',
 		},
 		createdAt: now,
@@ -69,7 +69,7 @@ export async function updateSessionWithEssentiaAnalysis(sessionId: string, essen
 		{
 			$set: {
 				essentiaAnalysis,
-				'progress.essentia': 'completed',
+				'progress.audio-analysis': 'completed',
 				updatedAt: new Date(),
 			},
 		}

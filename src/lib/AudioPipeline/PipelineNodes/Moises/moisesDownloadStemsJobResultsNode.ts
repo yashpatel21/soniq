@@ -1,10 +1,10 @@
 import { Job } from 'moises/sdk'
 import { join } from 'path'
 import { mkdir } from 'fs/promises'
-import { ExecutionContext, PipelineNode, createMergeNode } from '../../../DAGPipeline/DAGPipeline'
+import { ExecutionContext, PipelineNode, createMergeNode } from '../../../utils/DAGPipeline/DAGPipeline'
 import { ProcessedAudioFile, MoisesStemsJobResult } from '../types'
-import moisesClient from './moisesClient'
-import { updateComponentProgress } from '../../../db/audioSessionCollection'
+import moisesClient from '../../../utils/moises/moisesClient'
+import { updateComponentProgress } from '../../../utils/db/audioSessionCollection'
 
 /**
  * Download the stems job results from Moises

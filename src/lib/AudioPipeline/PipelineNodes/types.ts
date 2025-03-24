@@ -13,6 +13,22 @@ export interface ProcessedAudioFile {
 }
 
 /**
+ * Interface for the result of audio preparation
+ */
+export interface PreparedAudioData {
+	/** Unique identifier for the audio processing session */
+	sessionId: string
+	/** Mono audio data normalized and ready for analysis */
+	audioData: Float32Array
+	/** Sample rate of the audio */
+	sampleRate: number
+	/** Number of channels in the original audio */
+	originalChannels: number
+	/** Length of the audio in samples */
+	length: number
+}
+
+/**
  * Interface for the result of Essentia analysis
  */
 export interface EssentiaAnalysisResult {

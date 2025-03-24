@@ -6,7 +6,7 @@ import { useDropzone } from 'react-dropzone'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Upload, File, Loader2, AlertCircle } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils/ui/utils'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB in bytes
 const ACCEPTED_FILE_TYPES = {

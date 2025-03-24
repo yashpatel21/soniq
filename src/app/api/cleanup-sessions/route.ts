@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rm } from 'fs/promises'
-import { getAudioSessionsCollection } from '@/lib/db/audioSessionCollection'
+import { getAudioSessionsCollection } from '@/lib/utils/db/audioSessionCollection'
 
 // Simple API key check for security
 const API_KEY = process.env.CLEANUP_API_KEY

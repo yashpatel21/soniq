@@ -1,6 +1,6 @@
-import { NodeBuilder, PipelineNode } from '../../../DAGPipeline/DAGPipeline'
+import { NodeBuilder, PipelineNode } from '../../../utils/DAGPipeline/DAGPipeline'
 import { EssentiaAnalysisResult, ProcessedAudioFile } from '../types'
-import { updateComponentProgress, updateSessionWithEssentiaAnalysis } from '../../../db/audioSessionCollection'
+import { updateComponentProgress, updateSessionWithEssentiaAnalysis } from '../../../utils/db/audioSessionCollection'
 
 /**
  * Updates the MongoDB session document with Essentia analysis results
@@ -14,7 +14,7 @@ async function updateSessionWithEssentia(inputs: any[]): Promise<EssentiaAnalysi
 
 		try {
 			// Update the MongoDB document with Essentia analysis results
-			// Note: updateSessionWithEssentiaAnalysis already sets progress.essentia to 'completed'
+			// Note: updateSessionWithEssentiaAnalysis already sets progress.audio-analysis to 'completed'
 			await updateSessionWithEssentiaAnalysis(sessionId, {
 				bpm: essentiaResults.bpm,
 				key: essentiaResults.key,
@@ -25,7 +25,7 @@ async function updateSessionWithEssentia(inputs: any[]): Promise<EssentiaAnalysi
 		} catch (dbError) {
 			// If database update fails, mark as failed
 			console.error(`Failed to update session ${sessionId} with Essentia results:`, dbError)
-			await updateComponentProgress(sessionId, 'essentia', 'failed')
+			await updateComponentProgress(sessionId, 'audio-analysis', 'failed')
 		}
 
 		// Return the original Essentia results unchanged

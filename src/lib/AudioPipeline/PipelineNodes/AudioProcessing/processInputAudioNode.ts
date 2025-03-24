@@ -2,8 +2,8 @@ import { mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { v4 as uuidv4 } from 'uuid'
-import { NodeBuilder, PipelineNode } from '../../DAGPipeline/DAGPipeline'
-import { ProcessedAudioFile } from './types'
+import { NodeBuilder, PipelineNode } from '../../../utils/DAGPipeline/DAGPipeline'
+import { ProcessedAudioFile } from '../types'
 
 /**
  * Processes an audio file and stores it in a temporary directory.
