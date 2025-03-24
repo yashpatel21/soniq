@@ -15,7 +15,7 @@ interface AudioAnalysisData {
 
 interface StemsData {
 	stems?: {
-		[stemName: string]: string
+		[stemName: string]: string // Now contains URLs to stream each stem
 	}
 	status: 'pending' | 'processing' | 'completed' | 'failed'
 }
@@ -121,14 +121,44 @@ export default function AnalysisPage() {
 							<p>Status: {stemsQuery.data.status}</p>
 
 							{stemsQuery.data.status === 'completed' && stemsQuery.data.stems && (
-								<div className="mt-4">
-									<p>{Object.keys(stemsQuery.data.stems).length} stems generated</p>
+								<div className="mt-4 space-y-4">
+									<h3 className="text-lg font-medium">Stem Tracks ({Object.keys(stemsQuery.data.stems).length})</h3>
+
+									<div className="grid grid-cols-1 gap-4">
+										{Object.entries(stemsQuery.data.stems).map(([stemName, stemUrl]) => (
+											<div key={stemName} className="border rounded-lg p-4 bg-slate-50 shadow-sm">
+												<div className="flex items-center justify-between mb-3">
+													<h4 className="font-semibold text-slate-800">{stemName}</h4>
+													<span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
+														Ready
+													</span>
+												</div>
+												<audio controls className="w-full" src={stemUrl} preload="metadata">
+													Your browser does not support the audio element.
+												</audio>
+											</div>
+										))}
+									</div>
 								</div>
 							)}
 
-							{stemsQuery.data.status === 'processing' && <p>Processing stems...</p>}
+							{stemsQuery.data.status === 'processing' && (
+								<div className="mt-4 p-6 border rounded-lg bg-blue-50">
+									<div className="flex items-center gap-3">
+										<div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+										<p className="text-blue-800">Separating stems from your audio...</p>
+									</div>
+									<p className="mt-2 text-sm text-blue-600">
+										This can take a few minutes depending on the length of your track.
+									</p>
+								</div>
+							)}
 
-							{stemsQuery.data.status === 'failed' && <p className="text-red-500">Stems processing failed</p>}
+							{stemsQuery.data.status === 'failed' && (
+								<div className="mt-4 p-6 border rounded-lg bg-red-50">
+									<p className="text-red-700">Stem separation failed. Please try uploading your audio again.</p>
+								</div>
+							)}
 						</div>
 					)}
 				</div>
