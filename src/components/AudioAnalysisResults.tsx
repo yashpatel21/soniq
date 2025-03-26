@@ -161,7 +161,7 @@ export function AudioAnalysisResults({ analysisData, isLoading, isError }: Audio
 
 	return (
 		<div className="mt-2 pt-2">
-			<div className="p-0">
+			<div>
 				{/* Loading state */}
 				{isLoading && (
 					<div className="p-2.5">
@@ -259,7 +259,7 @@ export function AudioAnalysisResults({ analysisData, isLoading, isError }: Audio
 						/>
 
 						{/* SonIQ Insights card */}
-						<Card className="border border-border/40 shadow-sm">
+						<Card className="border border-border/40 bg-accent/30">
 							<CardContent className="p-4 flex flex-col items-center justify-center text-center">
 								<div className="rounded-full p-2.5 flex-shrink-0 my-2 bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
 									<Lightbulb className="h-5 w-5" />
@@ -299,7 +299,7 @@ function AnalysisResult({
 	hasLongText,
 }: AnalysisResultProps) {
 	return (
-		<Card className="border border-border/40 shadow-sm">
+		<Card className="border border-border/40 bg-accent/30">
 			<CardContent className="p-4 flex flex-col items-center justify-center text-center">
 				<div className={cn('rounded-full p-2.5 flex-shrink-0 my-2', iconBgClass, iconTextClass)} style={customStyle}>
 					{ringClass && <div className={ringClass}></div>}

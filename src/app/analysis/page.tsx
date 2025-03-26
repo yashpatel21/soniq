@@ -90,7 +90,7 @@ export default function AnalysisPage() {
 	return (
 		<div className="relative min-h-screen flex flex-col bg-background">
 			{/* Main content container */}
-			<div className="mx-auto w-full max-w-screen-xl px-2 sm:px-3 lg:px-4 pt-2 pb-1 relative z-10 flex flex-col">
+			<div className="mx-auto w-full max-w-5xl px-6 sm:px-8 lg:px-12 pt-2 pb-1 relative z-10 flex flex-col">
 				{/* Improved header with proper sizing and less whitespace */}
 				<header className="flex items-center justify-between mb-2 pb-1 border-b border-border/20 flex-shrink-0">
 					<h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
