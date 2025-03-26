@@ -1,0 +1,508 @@
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Slider } from '@/components/ui/slider'
+import { Card } from '@/components/ui/card'
+import { Play, Pause, Volume2, VolumeX, Download } from 'lucide-react'
+import { formatTime } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import WaveSurfer from 'wavesurfer.js'
+
+// Use a safe version of useLayoutEffect that falls back to useEffect in SSR
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
+
+// Define global styles for the stem-colored slider
+const globalStyles = `
+.stem-colored-slider [data-slot="slider-track"] {
+  background-color: var(--slider-track, rgba(148, 163, 184, 0.2));
+}
+
+.stem-colored-slider [data-slot="slider-range"] {
+  background-color: var(--slider-range, rgb(79, 70, 229));
+}
+
+.stem-colored-slider [data-slot="slider-thumb"] {
+  border-color: var(--slider-thumb, rgb(79, 70, 229));
+}
+`
+
+interface WaveformPlayerProps {
+	stemName: string
+	stemUrl: string
+	waveColor?: string
+	progressColor?: string
+	className?: string
+}
+
+export function WaveformPlayer({
+	stemName,
+	stemUrl,
+	waveColor = 'rgb(148, 163, 184)',
+	progressColor = 'rgb(79, 70, 229)',
+	className = '',
+}: WaveformPlayerProps) {
+	// Essential state
+	const [isPlaying, setIsPlaying] = useState(false)
+	const [isMuted, setIsMuted] = useState(false)
+	const [volume, setVolume] = useState(0.75)
+	const [currentTime, setCurrentTime] = useState(0)
+	const [duration, setDuration] = useState(0)
+	const [isReady, setIsReady] = useState(false)
+	const [error, setError] = useState<string | null>(null)
+	const [containerReady, setContainerReady] = useState(false)
+	const [isHoveringDownload, setIsHoveringDownload] = useState(false)
+
+	// Refs
+	const containerRef = useRef<HTMLDivElement>(null)
+	const wavesurferRef = useRef<WaveSurfer | null>(null)
+	const timeUpdateIntervalRef = useRef<number | null>(null)
+	const isCleanedUpRef = useRef(false)
+
+	// Add global styles to the document head once when the component is first mounted
+	useEffect(() => {
+		if (typeof document === 'undefined') return
+
+		const styleId = 'stem-colored-slider-styles'
+		if (!document.getElementById(styleId)) {
+			const styleEl = document.createElement('style')
+			styleEl.id = styleId
+			styleEl.innerHTML = globalStyles
+			document.head.appendChild(styleEl)
+			return () => {
+				const element = document.getElementById(styleId)
+				if (element) {
+					element.remove()
+				}
+			}
+		}
+	}, [])
+
+	// First, ensure container is properly sized and ready before WaveSurfer initialization
+	useIsomorphicLayoutEffect(() => {
+		if (!containerRef.current) return
+
+		// Force container to have explicit dimensions before WaveSurfer initialization
+		const container = containerRef.current
+		const rect = container.getBoundingClientRect()
+
+		// Apply explicit dimensions if needed
+		if (rect.width === 0) {
+			container.style.width = '100%'
+		}
+
+		if (rect.height === 0) {
+			container.style.height = '24px'
+		}
+
+		// Ensure any existing inline styles don't conflict
+		container.style.position = 'relative'
+		container.style.display = 'block'
+
+		// Signal that container is ready for WaveSurfer initialization
+		setContainerReady(true)
+
+		return () => {
+			setContainerReady(false)
+		}
+	}, [])
+
+	// Initialize WaveSurfer once container is ready
+	useEffect(() => {
+		// Exit early if server-side rendering, container not ready, or containerReady not set
+		if (typeof window === 'undefined' || !containerRef.current || !containerReady) return
+
+		// Reset cleanup flag on each initialization
+		isCleanedUpRef.current = false
+
+		// Create and configure WaveSurfer instance
+		try {
+			const ws = WaveSurfer.create({
+				container: containerRef.current,
+				height: 24,
+				waveColor,
+				progressColor,
+				barWidth: 1,
+				barGap: 1,
+				barRadius: 2,
+				cursorWidth: 2,
+				cursorColor: 'rgba(255, 255, 255, 0.5)',
+				normalize: true,
+			})
+
+			// Save reference
+			wavesurferRef.current = ws
+
+			// Set up event listeners
+			ws.on('ready', () => {
+				if (isCleanedUpRef.current) return
+				setDuration(ws.getDuration())
+				setIsReady(true)
+
+				// Set initial volume after the audio is fully loaded
+				try {
+					ws.setVolume(isMuted ? 0 : volume)
+				} catch (e) {
+					console.error('Error setting initial volume:', e)
+				}
+
+				// Enable clicking on waveform to play from that position
+				ws.on('click', () => {
+					if (isCleanedUpRef.current) return
+
+					// If not playing, start playback
+					if (!ws.isPlaying()) {
+						try {
+							ws.play()
+						} catch (e) {
+							console.error('Error starting playback after waveform click:', e)
+						}
+					}
+				})
+			})
+
+			ws.on('play', () => {
+				if (isCleanedUpRef.current) return
+				setIsPlaying(true)
+			})
+
+			ws.on('pause', () => {
+				if (isCleanedUpRef.current) return
+				setIsPlaying(false)
+			})
+
+			ws.on('error', (err) => {
+				if (isCleanedUpRef.current) return
+
+				// Ignore AbortError when it's related to volume changes
+				if (err.name === 'AbortError' && err.message.includes('user aborted')) {
+					console.warn(`Non-critical abort error for ${stemName}:`, err)
+					return
+				}
+
+				console.error(`WaveSurfer error for ${stemName}:`, err)
+				setError('Failed to load audio')
+			})
+
+			// Set up time update interval
+			timeUpdateIntervalRef.current = window.setInterval(() => {
+				if (isCleanedUpRef.current) return
+				if (ws && ws.isPlaying()) {
+					setCurrentTime(ws.getCurrentTime())
+				}
+			}, 250)
+
+			// Load audio
+			try {
+				ws.load(stemUrl)
+			} catch (err) {
+				console.error(`Error loading audio for ${stemName}:`, err)
+				if (!isCleanedUpRef.current) {
+					setError('Failed to load audio')
+				}
+			}
+		} catch (initError) {
+			console.error('Failed to initialize WaveSurfer:', initError)
+			if (!isCleanedUpRef.current) {
+				setError('Failed to initialize audio player')
+			}
+		}
+
+		// Cleanup function
+		return () => {
+			// Mark as cleaned up to prevent state updates
+			isCleanedUpRef.current = true
+
+			// Clear time update interval
+			if (timeUpdateIntervalRef.current) {
+				clearInterval(timeUpdateIntervalRef.current)
+				timeUpdateIntervalRef.current = null
+			}
+
+			// Safely destroy wavesurfer instance
+			try {
+				if (wavesurferRef.current) {
+					// Try/catch here in case wavesurfer is already being destroyed or has issues
+					try {
+						wavesurferRef.current.destroy()
+					} catch (e) {
+						console.log('Wavesurfer already destroyed or errored during cleanup')
+					}
+					wavesurferRef.current = null
+				}
+			} catch (e) {
+				console.error('Error cleaning up WaveSurfer:', e)
+			}
+		}
+	}, [stemName, stemUrl, waveColor, progressColor, containerReady])
+
+	// Maintain a reference to the current volume and mute state
+	const volumeRef = useRef(volume)
+	const isMutedRef = useRef(isMuted)
+
+	// Update refs when state changes
+	useEffect(() => {
+		volumeRef.current = volume
+		isMutedRef.current = isMuted
+	}, [volume, isMuted])
+
+	// Update volume when it changes in a separate effect with debounce
+	useEffect(() => {
+		if (!wavesurferRef.current || !isReady || isCleanedUpRef.current) return
+
+		// Use debounce to prevent rapid sequential volume changes
+		const debounceTimeout = setTimeout(() => {
+			if (!wavesurferRef.current || isCleanedUpRef.current) return
+
+			try {
+				wavesurferRef.current.setVolume(isMuted ? 0 : volume)
+			} catch (e: any) {
+				// Ignore AbortError
+				if (e.name === 'AbortError') {
+					console.warn('Volume change aborted, ignoring:', e)
+				} else {
+					console.error('Error setting volume:', e)
+				}
+				// Don't set error state for volume errors
+			}
+		}, 100)
+
+		return () => clearTimeout(debounceTimeout)
+	}, [volume, isMuted, isReady])
+
+	// Handle play/pause
+	const togglePlayPause = () => {
+		if (!wavesurferRef.current || !isReady || isCleanedUpRef.current) return
+
+		try {
+			wavesurferRef.current.playPause()
+		} catch (e) {
+			console.error('Error toggling playback:', e)
+		}
+	}
+
+	// Handle volume change with error trapping
+	const handleVolumeChange = (values: number[]) => {
+		if (!isReady) return
+
+		try {
+			const newVolume = values[0] / 100
+			setVolume(newVolume)
+
+			if (newVolume === 0) {
+				setIsMuted(true)
+			} else if (isMuted) {
+				setIsMuted(false)
+			}
+		} catch (e) {
+			console.error('Error handling volume change:', e)
+			// Don't set error state for volume changes
+		}
+	}
+
+	// Handle mute toggle
+	const toggleMute = () => {
+		try {
+			setIsMuted(!isMuted)
+		} catch (e) {
+			console.error('Error toggling mute:', e)
+			// Don't set error state for mute toggle
+		}
+	}
+
+	// Handle download
+	const handleDownload = () => {
+		try {
+			const link = document.createElement('a')
+			link.href = stemUrl
+			link.download = `${stemName}.mp3`
+			document.body.appendChild(link)
+			link.click()
+			document.body.removeChild(link)
+		} catch (e) {
+			console.error('Error downloading file:', e)
+		}
+	}
+
+	// Get stem icon
+	const getStemIcon = () => {
+		const stemLower = stemName.toLowerCase()
+		if (stemLower.includes('vocal')) return '🎤'
+		if (stemLower.includes('drum')) return '🥁'
+		if (stemLower.includes('bass')) return '🎸'
+		if (stemLower.includes('guitar')) return '🎸'
+		if (stemLower.includes('piano')) return '🎹'
+		if (stemLower.includes('keys')) return '🎹'
+		if (stemLower.includes('strings')) return '🎻'
+		if (stemLower.includes('wind')) return '🎷'
+		return '🎵'
+	}
+
+	// Card style based on stem type
+	const cardStyle = {
+		borderLeft: `3px solid ${progressColor}`,
+		background: `linear-gradient(135deg, rgba(${progressColor.match(/\d+/g)?.[0]},${progressColor.match(/\d+/g)?.[1]},${
+			progressColor.match(/\d+/g)?.[2]
+		},0.05), rgba(${progressColor.match(/\d+/g)?.[0]},${progressColor.match(/\d+/g)?.[1]},${progressColor.match(/\d+/g)?.[2]},0.12))`,
+	}
+
+	// Error state
+	if (error) {
+		return (
+			<Card className={cn('border border-destructive/30 text-xs p-2 text-center', className)}>
+				<p className="font-medium text-destructive">Error loading audio</p>
+				<p className="text-xs text-muted-foreground">Unable to process this stem</p>
+			</Card>
+		)
+	}
+
+	// Normal state
+	return (
+		<Card className={cn('border px-1.5 py-2.5', className)} style={cardStyle}>
+			{/* Header row with title and download */}
+			<div className="flex items-center justify-between mb-0 mt-0.5 relative z-10">
+				<div className="flex items-center gap-1.5">
+					<span className="text-lg">{getStemIcon()}</span>
+					<span className="text-lg font-medium line-clamp-1">{stemName}</span>
+				</div>
+
+				<Button
+					variant="ghost"
+					size="icon"
+					onClick={handleDownload}
+					className={cn(
+						'h-7 w-7 rounded-full',
+						isHoveringDownload ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted/80'
+					)}
+					onMouseEnter={() => setIsHoveringDownload(true)}
+					onMouseLeave={() => setIsHoveringDownload(false)}
+				>
+					<Download className="h-4 w-4" />
+				</Button>
+			</div>
+
+			{/* Waveform container */}
+			<div ref={containerRef} className="w-full rounded-md overflow-hidden bg-card/50 my-0 relative z-10" />
+
+			{/* Controls row */}
+			<div className="flex items-center relative text-xs mt-0 mb-0.5 px-1.5 z-10">
+				<Button
+					size="sm"
+					variant={isPlaying ? 'default' : 'secondary'}
+					className={cn(
+						'h-8 w-8 rounded-full p-0 shadow-sm transition-all duration-200',
+						isPlaying
+							? 'text-primary-foreground hover:brightness-110 hover:shadow-md'
+							: 'bg-gradient-to-br from-background/90 to-background/60 hover:shadow-md hover:scale-105 hover:brightness-110',
+						!isReady && 'opacity-50'
+					)}
+					onClick={togglePlayPause}
+					disabled={!isReady}
+					style={
+						isPlaying
+							? ({
+									backgroundColor: progressColor,
+									boxShadow: 'none',
+							  } as React.CSSProperties)
+							: ({
+									borderColor: `${progressColor}40`,
+									background: `linear-gradient(135deg, rgba(${progressColor.match(/\d+/g)?.[0]},${
+										progressColor.match(/\d+/g)?.[1]
+									},${progressColor.match(/\d+/g)?.[2]},0.1), rgba(${progressColor.match(/\d+/g)?.[0]},${
+										progressColor.match(/\d+/g)?.[1]
+									},${progressColor.match(/\d+/g)?.[2]},0.2))`,
+									'--tw-ring-color': `${progressColor}40`,
+									'--tw-ring-offset-shadow':
+										'var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color)',
+									'--tw-ring-shadow':
+										'var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color)',
+							  } as React.CSSProperties)
+					}
+					onMouseEnter={(e) => {
+						if (isPlaying) {
+							e.currentTarget.style.boxShadow = `0 0 0 2px rgba(${progressColor.match(/\d+/g)?.[0]},${
+								progressColor.match(/\d+/g)?.[1]
+							},${progressColor.match(/\d+/g)?.[2]},0.4)`
+						} else {
+							// No ring for play button, just enhance the background
+							e.currentTarget.style.boxShadow = 'none'
+							e.currentTarget.style.background = `linear-gradient(135deg, rgba(${progressColor.match(/\d+/g)?.[0]},${
+								progressColor.match(/\d+/g)?.[1]
+							},${progressColor.match(/\d+/g)?.[2]},0.4), rgba(${progressColor.match(/\d+/g)?.[0]},${
+								progressColor.match(/\d+/g)?.[1]
+							},${progressColor.match(/\d+/g)?.[2]},0.6))`
+							const playIcon = e.currentTarget.querySelector('.h-4.w-4')
+							if (playIcon) {
+								;(playIcon as HTMLElement).style.color = 'white'
+							}
+						}
+					}}
+					onMouseLeave={(e) => {
+						if (isPlaying) {
+							e.currentTarget.style.boxShadow = 'none'
+						} else {
+							e.currentTarget.style.boxShadow = ''
+							e.currentTarget.style.borderColor = `${progressColor}40`
+							e.currentTarget.style.background = `linear-gradient(135deg, rgba(${progressColor.match(/\d+/g)?.[0]},${
+								progressColor.match(/\d+/g)?.[1]
+							},${progressColor.match(/\d+/g)?.[2]},0.1), rgba(${progressColor.match(/\d+/g)?.[0]},${
+								progressColor.match(/\d+/g)?.[1]
+							},${progressColor.match(/\d+/g)?.[2]},0.2))`
+							const playIcon = e.currentTarget.querySelector('.h-4.w-4')
+							if (playIcon) {
+								;(playIcon as HTMLElement).style.color = ''
+							}
+						}
+					}}
+				>
+					{isPlaying ? (
+						<Pause className="h-4 w-4" style={{ color: 'white' }} />
+					) : (
+						<Play className="h-4 w-4" style={{ color: 'white' }} />
+					)}
+				</Button>
+
+				{/* Centered timestamp */}
+				<div className="absolute left-0 right-0 mx-auto w-fit text-center">
+					<span className="text-xs text-muted-foreground">
+						{isReady ? `${formatTime(currentTime)} / ${formatTime(duration)}` : '--:--'}
+					</span>
+				</div>
+
+				{/* Right-aligned volume controls */}
+				<div className="ml-auto flex items-center gap-1.5">
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={toggleMute}
+						className={cn(
+							'h-5 w-5 p-0 rounded-full',
+							isMuted ? 'text-muted-foreground/60' : 'text-muted-foreground',
+							!isReady && 'opacity-50'
+						)}
+						disabled={!isReady}
+					>
+						{isMuted ? <VolumeX className="h-2.5 w-2.5" /> : <Volume2 className="h-2.5 w-2.5" />}
+					</Button>
+
+					<Slider
+						value={[isMuted ? 0 : volume * 100]}
+						max={100}
+						step={1}
+						className={cn('cursor-pointer h-1 w-12 sm:w-16 stem-colored-slider', !isReady && 'opacity-50')}
+						onValueChange={handleVolumeChange}
+						disabled={!isReady}
+						style={
+							{
+								// Dark background with a subtle hint of the stem color
+								'--slider-track': `rgba(${progressColor.match(/\d+/g)?.[0]},${progressColor.match(/\d+/g)?.[1]},${
+									progressColor.match(/\d+/g)?.[2]
+								},0.08)`,
+								'--slider-range': progressColor,
+								'--slider-thumb': progressColor,
+							} as React.CSSProperties
+						}
+					/>
+				</div>
+			</div>
+		</Card>
+	)
+}
