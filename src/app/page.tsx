@@ -4,7 +4,7 @@ import { FileUpload } from '@/components/FileUpload'
 import { MainHeader } from '@/components/MainHeader'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { Wand2, Scissors, FileMusic, AudioWaveform, FileAudio } from 'lucide-react'
+import { Wand2, Scissors, FileMusic, AudioWaveform } from 'lucide-react'
 import { useCallback, useState, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { cn } from '@/lib/utils/ui/utils'
@@ -61,24 +61,16 @@ export default function Home() {
 				style={{ animationDelay: '1s', animationDuration: '8s' }}
 			></div>
 
-			{/* Semi-transparent overlay when dragging */}
-			{isDragging && <div className="fixed inset-0 bg-background/70 backdrop-blur-[4px] z-10 pointer-events-none"></div>}
-
-			{/* Reusable header */}
-			<div className="relative z-10">
-				<MainHeader isBlurred={isDragging} />
+			{/* Header */}
+			<div className={cn('relative z-10', isDragging && 'blur-[3px]')}>
+				<MainHeader />
 			</div>
 
 			{/* Hero section */}
 			<main className="absolute inset-0 flex items-center justify-center pointer-events-none">
 				<div className="container max-w-7xl px-4 md:px-6 flex flex-col lg:flex-row items-start gap-12 lg:gap-20 pointer-events-auto">
 					{/* Left side - text content */}
-					<div
-						className={cn(
-							'flex-1 space-y-8 flex flex-col justify-between',
-							isDragging && 'opacity-30 transition-opacity duration-300 blur-[3px]'
-						)}
-					>
+					<div className={cn('flex-1 space-y-8 flex flex-col justify-between', isDragging && 'blur-[3px]')}>
 						<div className="space-y-5">
 							<Badge variant="secondary" className="px-3 py-1 text-xs rounded-full">
 								AI-Powered Audio Analysis
@@ -136,17 +128,10 @@ export default function Home() {
 					</div>
 
 					{/* Right side - file upload */}
-					<div
-						className={cn(
-							'w-full lg:w-[450px] relative',
-							isDragging
-								? 'fixed top-1/2 -translate-y-1/2 right-1/2 translate-x-1/2 lg:right-auto lg:translate-x-0 lg:left-[calc(50%+170px)] z-20'
-								: 'self-start mt-6'
-						)}
-					>
+					<div className="w-full lg:w-[450px] self-start mt-6 relative z-20">
 						<Card className="bg-accent/30 border-border/40 w-full">
 							<CardContent className="px-6 pt-4 pb-3">
-								<div className={cn('mb-3', isDragging && 'opacity-0 absolute pointer-events-none')}>
+								<div className="mb-3">
 									<div className="flex items-start gap-3 mb-1">
 										<div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary/10 text-primary">
 											<AudioWaveform className="h-5 w-5" />

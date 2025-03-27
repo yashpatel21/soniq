@@ -136,36 +136,33 @@ export function FileUpload({ pageIsDragging, onExternalDrop }: FileUploadProps) 
 		}
 	}, [handleFileUpload])
 
-	// Determine if we should show drag state (either component or page level)
-	const isDragActive = isComponentDragActive || pageIsDragging
-
 	return (
 		<div className="w-full">
 			<div
 				{...getRootProps()}
 				className={cn(
-					'relative rounded-lg border transition-all duration-200 w-full',
+					'relative rounded-lg border w-full transition-all duration-200',
 					error && 'border-destructive bg-destructive/10',
-					isDragActive && !error && 'border-primary bg-primary/5',
-					isProcessing && !error && !isDragActive && 'border-primary bg-primary/5',
-					!isProcessing && !error && !isDragActive && 'border-border hover:bg-accent/50'
+					isProcessing && !error && 'border-primary bg-primary/5',
+					!isProcessing && !error && 'border-border hover:bg-accent/50'
 				)}
+				style={{ height: '220px' }}
 			>
 				<input {...getInputProps()} />
-				<div className="flex flex-col items-center justify-center gap-3 py-6 px-4 text-center min-h-[160px]">
+				<div className="flex flex-col items-center justify-center px-5 text-center w-full h-full">
 					{isProcessing && !error ? (
-						<>
-							<div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary/20">
+						<div className="space-y-3.5">
+							<div className="w-11 h-11 rounded-full flex items-center justify-center bg-primary/20 mx-auto">
 								<Loader2 className="h-5 w-5 text-primary animate-spin" />
 							</div>
 							<div>
 								<p className="text-base font-medium">Processing audio...</p>
-								<p className="text-sm text-muted-foreground mt-0.5">This may take a moment</p>
+								<p className="text-sm text-muted-foreground mt-1">This may take a moment</p>
 							</div>
-						</>
+						</div>
 					) : error ? (
-						<>
-							<div className="w-10 h-10 rounded-full flex items-center justify-center bg-destructive/20">
+						<div className="space-y-3.5">
+							<div className="w-11 h-11 rounded-full flex items-center justify-center bg-destructive/20 mx-auto">
 								<AlertCircle className="h-5 w-5 text-destructive" />
 							</div>
 							<div>
@@ -182,32 +179,33 @@ export function FileUpload({ pageIsDragging, onExternalDrop }: FileUploadProps) 
 									Try Again
 								</Button>
 							</div>
-						</>
-					) : isDragActive ? (
-						<>
-							<div className="w-14 h-14 rounded-full flex items-center justify-center bg-primary/20">
-								<Music className="h-7 w-7 text-primary" />
+						</div>
+					) : pageIsDragging ? (
+						<div className="space-y-3">
+							<div className="w-11 h-11 rounded-full flex items-center justify-center bg-primary/20 mx-auto">
+								<Upload className="h-5 w-5 text-primary" />
 							</div>
-							<div>
-								<p className="text-xl font-medium text-primary">Drop your audio file</p>
-								<p className="text-sm text-primary/80 mt-1">Release to upload and start analysis</p>
+							<div className="space-y-1">
+								<p className="text-base font-medium text-primary">Drop anywhere to upload</p>
+								<p className="text-sm text-primary/80">Release to analyze your audio</p>
 							</div>
-						</>
+							<p className="text-xs text-muted-foreground pt-4">Supports MP3, WAV, and FLAC (max 10MB)</p>
+						</div>
 					) : (
-						<>
-							<div className="w-10 h-10 rounded-full flex items-center justify-center bg-muted">
+						<div className="space-y-3">
+							<div className="w-11 h-11 rounded-full flex items-center justify-center bg-muted mx-auto">
 								<Upload className="h-5 w-5 text-muted-foreground" />
 							</div>
-							<div>
+							<div className="space-y-1">
 								<p className="text-base font-medium">Drop your audio file here</p>
-								<p className="text-sm text-muted-foreground mt-0.5">Or click to browse</p>
+								<p className="text-sm text-muted-foreground">Or click to browse</p>
 							</div>
-							<Button type="button" variant="secondary" size="sm" className="mt-2">
+							<Button type="button" variant="secondary" size="sm" className="mt-1">
 								<File className="w-4 h-4 mr-1.5" />
 								Select File
 							</Button>
-							<p className="text-xs text-muted-foreground mt-4">Supports MP3, WAV, and FLAC (max 10MB)</p>
-						</>
+							<p className="text-xs text-muted-foreground pt-1.5">Supports MP3, WAV, and FLAC (max 10MB)</p>
+						</div>
 					)}
 				</div>
 			</div>
