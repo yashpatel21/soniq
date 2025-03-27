@@ -6,7 +6,9 @@ import { useQuery } from '@tanstack/react-query'
 import { AudioAnalysisResults } from '@/components/AudioAnalysisResults'
 import { StemsContainer } from '@/components/StemsContainer'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AudioWaveform, AlertTriangle, Music, Info } from 'lucide-react'
+import { AlertTriangle, Music, Info } from 'lucide-react'
+import { AnalysisNavigation } from '@/components/AnalysisNavigation'
+import { MainHeader } from '@/components/MainHeader'
 
 interface AudioAnalysisData {
 	analysisResults?: {
@@ -27,11 +29,12 @@ interface StemsData {
 export default function AnalysisPage() {
 	const searchParams = useSearchParams()
 	const sessionId = searchParams.get('sessionId')
+	const [activeTab, setActiveTab] = React.useState('analysis')
 
 	// If there's no sessionId, show an error
 	if (!sessionId) {
 		return (
-			<div className="fixed inset-0 flex items-center justify-center bg-background h-screen w-screen">
+			<div className="fixed inset-0 flex items-center justify-center bg-background">
 				<Alert variant="destructive" className="max-w-md mx-auto">
 					<div className="flex gap-2 items-center">
 						<Info className="h-5 w-5" />
@@ -88,41 +91,34 @@ export default function AnalysisPage() {
 	}, [analysisQuery.data?.status, stemsQuery.data?.status, analysisQuery.refetch, stemsQuery.refetch])
 
 	return (
-		<div className="relative min-h-screen flex flex-col bg-background">
-			{/* Main content container */}
-			<div className="mx-auto w-full max-w-5xl px-6 sm:px-8 lg:px-12 pt-2 pb-1 relative z-10 flex flex-col">
-				{/* Improved header with proper sizing and less whitespace */}
-				<header className="flex items-center justify-between mb-2 pb-1 border-b border-border/20 flex-shrink-0">
-					<h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
-						<AudioWaveform className="h-6 w-6 text-blue-500" />
-						<span>Analysis Results</span>
-					</h1>
-					<p className="text-sm text-muted-foreground max-w-md">Insights into your track's musical properties and stems</p>
-				</header>
+		<div className="min-h-screen bg-background">
+			{/* Header */}
+			<MainHeader />
 
-				{/* Content area with flex-grow to fill available space */}
-				<div className="flex flex-col gap-2">
-					{/* Audio Analysis Results Component */}
-					<div>
-						<AudioAnalysisResults
-							analysisData={analysisQuery.data}
-							isLoading={analysisQuery.isLoading}
-							isError={analysisQuery.isError}
-						/>
-					</div>
+			{/* Main content with navigation */}
+			<div className="flex">
+				{/* Navigation - Left Side */}
+				<nav className="fixed top-1/2 -translate-y-1/2 left-0 w-20 bg-background/95 backdrop-blur-md">
+					<AnalysisNavigation activeTab={activeTab} onTabChange={setActiveTab} orientation="side" />
+				</nav>
 
-					{/* Stems Container Component with flex-grow to take remaining space */}
-					<div>
-						<StemsContainer stemsData={stemsQuery.data} isLoading={stemsQuery.isLoading} isError={stemsQuery.isError} />
-					</div>
-
-					<div className="flex justify-end pt-1">
-						<div className="text-xs text-muted-foreground flex items-center gap-1">
-							<Music className="h-3 w-3" />
-							<span>SonIQ Audio Analysis</span>
+				{/* Main content area */}
+				<main className="flex-1 ml-20">
+					<div className="px-8 md:px-16 lg:px-24 flex justify-center">
+						<div className="w-full max-w-7xl">
+							{activeTab === 'analysis' && (
+								<AudioAnalysisResults
+									analysisData={analysisQuery.data}
+									isLoading={analysisQuery.isLoading}
+									isError={analysisQuery.isError}
+								/>
+							)}
+							{activeTab === 'stems' && (
+								<StemsContainer stemsData={stemsQuery.data} isLoading={stemsQuery.isLoading} isError={stemsQuery.isError} />
+							)}
 						</div>
 					</div>
-				</div>
+				</main>
 			</div>
 		</div>
 	)

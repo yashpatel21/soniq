@@ -2,7 +2,7 @@ import React from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Activity, Clock, Music2, AlertTriangle, Lightbulb } from 'lucide-react'
+import { Activity, Clock, Music2, AlertTriangle, Lightbulb, AudioWaveform } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 
@@ -159,21 +159,43 @@ export function AudioAnalysisResults({ analysisData, isLoading, isError }: Audio
 		)
 	}
 
+	// Show skeletons if loading OR not completed yet (pending/processing)
+	const showSkeletons = isLoading || (analysisData && analysisData.status !== 'completed' && analysisData.status !== 'failed')
+
 	return (
-		<div className="mt-2 pt-2">
-			<div>
+		<div className="h-full flex flex-col">
+			{/* Sticky header */}
+			<div className="sticky top-0 z-20 bg-background/95 backdrop-blur-md border-b border-border/40">
+				<div className="py-8">
+					<div className="flex items-center gap-4 mb-3">
+						<div className="flex-shrink-0">
+							<AudioWaveform className="h-8 w-8 text-primary" />
+						</div>
+						<div>
+							<h1 className="text-4xl font-bold tracking-tight">Musical Analysis</h1>
+							<p className="text-muted-foreground text-base leading-relaxed mt-2 max-w-2xl">
+								Discover the musical DNA of your track. Get precise BPM, key detection, and DJ-friendly insights to help you
+								mix and match tracks perfectly.
+							</p>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* Scrollable content */}
+			<div className="flex-1 overflow-auto">
 				{/* Loading state */}
-				{isLoading && (
-					<div className="p-2.5">
+				{showSkeletons && (
+					<div className="p-3">
 						<div className="grid grid-cols-3 gap-4">
 							{[1, 2, 3].map((i) => (
-								<Card key={i} className="border border-border/40">
+								<Card key={i} className="border border-border/40 bg-accent/30">
 									<CardContent className="p-4 flex flex-col items-center justify-center text-center">
 										<Skeleton className="h-10 w-10 rounded-full my-2" />
-										<div className="flex-1 flex flex-col items-center mt-2">
+										<div className="flex-1 flex flex-col items-center mt-1">
 											<Skeleton className="h-3 w-20 mb-2" />
 											<Skeleton className="h-6 w-16 mb-1" />
-											<Skeleton className="h-3 w-24" />
+											<Skeleton className="h-3 w-24 mt-1" />
 										</div>
 									</CardContent>
 								</Card>
@@ -183,7 +205,7 @@ export function AudioAnalysisResults({ analysisData, isLoading, isError }: Audio
 				)}
 
 				{/* Error state */}
-				{isError && (
+				{isError && !showSkeletons && (
 					<div className="p-2.5">
 						<Alert variant="destructive" className="py-1.5">
 							<AlertTriangle className="h-4 w-4 mr-2" />
@@ -192,30 +214,8 @@ export function AudioAnalysisResults({ analysisData, isLoading, isError }: Audio
 					</div>
 				)}
 
-				{/* Processing state */}
-				{analysisData?.status === 'processing' && (
-					<div className="p-2.5">
-						<div className="bg-accent/30 rounded-lg p-2.5 border border-border/40">
-							<div className="flex items-center gap-3">
-								<div className="relative h-10 w-10 flex-shrink-0">
-									<div className="absolute inset-0 flex justify-center items-center">
-										<Clock className="h-7 w-7 text-primary opacity-80 animate-pulse" />
-									</div>
-								</div>
-								<div className="flex-1">
-									<div className="h-2 bg-primary/10 rounded-full overflow-hidden mb-1.5">
-										<div className="h-full bg-primary animate-waveProgress"></div>
-									</div>
-									<p className="text-sm">Analyzing your audio track...</p>
-									<p className="text-xs text-muted-foreground">Detecting tempo, key and other musical elements</p>
-								</div>
-							</div>
-						</div>
-					</div>
-				)}
-
 				{/* Failed state */}
-				{analysisData?.status === 'failed' && (
+				{analysisData?.status === 'failed' && !showSkeletons && (
 					<div className="p-2.5">
 						<Alert variant="destructive">
 							<div className="flex items-center gap-2">
@@ -230,7 +230,7 @@ export function AudioAnalysisResults({ analysisData, isLoading, isError }: Audio
 				)}
 
 				{/* Completed state with results */}
-				{analysisData?.status === 'completed' && analysisData.analysisResults && (
+				{analysisData?.status === 'completed' && analysisData.analysisResults && !isLoading && (
 					<div className="grid grid-cols-3 gap-4 p-3">
 						{/* Tempo card with animated ring */}
 						<AnalysisResult

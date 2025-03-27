@@ -48,31 +48,31 @@ export function StemsProcessingVisualization() {
 			<div className="flex size-full max-w-lg flex-row items-stretch justify-between gap-10">
 				{/* Input - Music Note */}
 				<div className="flex flex-col justify-center">
-					<Circle ref={inputRef} className="bg-amber-100/10 dark:bg-amber-950/10">
-						<Music className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+					<Circle ref={inputRef} className="bg-purple-100/10 dark:bg-purple-950/10">
+						<Music className="h-5 w-5 text-purple-600 dark:text-purple-400" />
 					</Circle>
 				</div>
 
 				{/* Processor - Brain */}
 				<div className="flex flex-col justify-center">
-					<Circle ref={processorRef} size="lg" className="bg-purple-100/10 dark:bg-purple-950/10">
-						<Brain className="h-7 w-7 text-purple-600 dark:text-purple-400" />
+					<Circle ref={processorRef} size="lg" className="bg-amber-100/10 dark:bg-amber-950/10">
+						<Brain className="h-7 w-7 text-amber-600 dark:text-amber-400" />
 					</Circle>
 				</div>
 
 				{/* Output Stems */}
 				<div className="flex flex-col justify-center gap-2">
-					<Circle ref={vocalsRef} className="bg-amber-100/10 dark:bg-amber-950/10">
-						<Mic className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+					<Circle ref={vocalsRef} className="bg-teal-100/10 dark:bg-teal-950/10">
+						<Mic className="h-5 w-5 text-teal-600 dark:text-teal-400" />
 					</Circle>
-					<Circle ref={drumsRef} className="bg-purple-100/10 dark:bg-purple-950/10">
-						<Drum className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+					<Circle ref={drumsRef} className="bg-teal-100/10 dark:bg-teal-950/10">
+						<Drum className="h-5 w-5 text-teal-600 dark:text-teal-400" />
 					</Circle>
-					<Circle ref={bassRef} className="bg-amber-100/10 dark:bg-amber-950/10">
-						<Guitar className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+					<Circle ref={bassRef} className="bg-teal-100/10 dark:bg-teal-950/10">
+						<Guitar className="h-5 w-5 text-teal-600 dark:text-teal-400" />
 					</Circle>
-					<Circle ref={otherRef} className="bg-purple-100/10 dark:bg-purple-950/10">
-						<Piano className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+					<Circle ref={otherRef} className="bg-teal-100/10 dark:bg-teal-950/10">
+						<Piano className="h-5 w-5 text-teal-600 dark:text-teal-400" />
 					</Circle>
 				</div>
 			</div>
@@ -88,8 +88,8 @@ export function StemsProcessingVisualization() {
 					pathColor="#94a3b8"
 					pathOpacity={0.15}
 					pathWidth={2}
-					gradientStartColor="#ffaa40"
-					gradientStopColor="#9c40ff"
+					gradientStartColor="#9c40ff"
+					gradientStopColor="#ffaa40"
 				/>
 
 				{/* Brain to Mic - Upward curve */}
@@ -102,7 +102,7 @@ export function StemsProcessingVisualization() {
 					pathOpacity={0.15}
 					pathWidth={2}
 					gradientStartColor="#ffaa40"
-					gradientStopColor="#9c40ff"
+					gradientStopColor="#2dd4bf"
 					curvature={100}
 				/>
 
@@ -116,7 +116,7 @@ export function StemsProcessingVisualization() {
 					pathOpacity={0.15}
 					pathWidth={2}
 					gradientStartColor="#ffaa40"
-					gradientStopColor="#9c40ff"
+					gradientStopColor="#2dd4bf"
 					curvature={30}
 				/>
 
@@ -130,7 +130,7 @@ export function StemsProcessingVisualization() {
 					pathOpacity={0.15}
 					pathWidth={2}
 					gradientStartColor="#ffaa40"
-					gradientStopColor="#9c40ff"
+					gradientStopColor="#2dd4bf"
 					curvature={-30}
 				/>
 
@@ -144,7 +144,7 @@ export function StemsProcessingVisualization() {
 					pathOpacity={0.15}
 					pathWidth={2}
 					gradientStartColor="#ffaa40"
-					gradientStopColor="#9c40ff"
+					gradientStopColor="#2dd4bf"
 					curvature={-100}
 				/>
 			</div>

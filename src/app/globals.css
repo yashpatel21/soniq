@@ -127,3 +127,23 @@
 .animate-subtle-ping {
 	animation: subtle-ping var(--tempo-duration, 1s) cubic-bezier(0, 0, 0.2, 1) infinite;
 }
+
+/* Wave animation for tab indicator */
+@keyframes wave {
+	0% {
+		transform: scaleX(0.8);
+		opacity: 0.5;
+	}
+	50% {
+		transform: scaleX(1.1);
+		opacity: 0.8;
+	}
+	100% {
+		transform: scaleX(0.8);
+		opacity: 0.5;
+	}
+}
+
+.animate-wave {
+	animation: wave 2s ease-in-out infinite;
+}
