@@ -30,12 +30,14 @@ export function FileUpload({ pageIsDragging, onExternalDrop }: FileUploadProps) 
 	const router = useRouter()
 	const [selectedFile, setSelectedFile] = useState<File | null>(null)
 	const [isProcessing, setIsProcessing] = useState(false)
+	const [isSuccess, setIsSuccess] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 
 	// Reset function to clear the state
 	const resetUpload = useCallback(() => {
 		setSelectedFile(null)
 		setIsProcessing(false)
+		setIsSuccess(false)
 		setError(null)
 	}, [])
 
@@ -43,6 +45,7 @@ export function FileUpload({ pageIsDragging, onExternalDrop }: FileUploadProps) 
 		async (acceptedFiles: File[], rejectedFiles: any[]) => {
 			// Clear any previous errors when attempting a new upload
 			setError(null)
+			setIsSuccess(false)
 
 			if (rejectedFiles.length > 0) {
 				const error = rejectedFiles[0].errors[0]
@@ -81,16 +84,15 @@ export function FileUpload({ pageIsDragging, onExternalDrop }: FileUploadProps) 
 					console.log('Analysis result:', data)
 
 					if (data.success) {
+						// Show success state
+						setIsProcessing(false)
+						setIsSuccess(true)
+
 						// Navigate to the analysis page with the results
 						router.push(`/analysis?sessionId=${data.sessionId}`)
 					} else {
 						throw new Error(data.message)
 					}
-
-					// Keep processing state active for 1 second to show the UI, for testing purposes
-					setTimeout(() => {
-						setIsProcessing(false)
-					}, 1000)
 				} catch (err) {
 					console.error('Error uploading file:', err)
 					setError('Failed to process the file. Please try again.')
@@ -121,7 +123,7 @@ export function FileUpload({ pageIsDragging, onExternalDrop }: FileUploadProps) 
 		accept: ACCEPTED_FILE_TYPES,
 		maxSize: MAX_FILE_SIZE,
 		multiple: false,
-		disabled: isProcessing && !error,
+		disabled: isProcessing || isSuccess || !!error,
 	})
 
 	// Expose method to process files dropped outside of this component
@@ -143,14 +145,15 @@ export function FileUpload({ pageIsDragging, onExternalDrop }: FileUploadProps) 
 				className={cn(
 					'relative rounded-lg border w-full transition-all duration-200',
 					error && 'border-destructive bg-destructive/10',
+					isSuccess && 'border-green-500 bg-green-500/10',
 					isProcessing && !error && 'border-primary bg-primary/5',
-					!isProcessing && !error && 'border-border hover:bg-accent/50'
+					!isProcessing && !isSuccess && !error && 'border-border hover:bg-accent/50'
 				)}
 				style={{ height: '220px' }}
 			>
 				<input {...getInputProps()} />
 				<div className="flex flex-col items-center justify-center px-5 text-center w-full h-full">
-					{isProcessing && !error ? (
+					{isProcessing ? (
 						<div className="space-y-3.5">
 							<div className="w-11 h-11 rounded-full flex items-center justify-center bg-primary/20 mx-auto">
 								<Loader2 className="h-5 w-5 text-primary animate-spin" />
@@ -158,6 +161,18 @@ export function FileUpload({ pageIsDragging, onExternalDrop }: FileUploadProps) 
 							<div>
 								<p className="text-base font-medium">Processing audio...</p>
 								<p className="text-sm text-muted-foreground mt-1">This may take a moment</p>
+							</div>
+						</div>
+					) : isSuccess ? (
+						<div className="space-y-3.5">
+							<div className="w-11 h-11 rounded-full flex items-center justify-center bg-green-500/20 mx-auto">
+								<svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+								</svg>
+							</div>
+							<div>
+								<p className="text-base font-medium text-green-500">Upload successful!</p>
+								<p className="text-sm text-muted-foreground mt-1">Redirecting to analysis...</p>
 							</div>
 						</div>
 					) : error ? (

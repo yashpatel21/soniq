@@ -81,7 +81,7 @@ export default function Home() {
 
 				{/* Hero section */}
 				<main className="absolute inset-0 flex items-center justify-center pointer-events-none">
-					<div className="container max-w-7xl px-4 md:px-6 flex flex-col lg:flex-row items-start gap-12 lg:gap-20 pointer-events-auto">
+					<div className="container max-w-6xl px-6 md:px-8 lg:px-10 flex flex-col lg:flex-row items-start gap-10 lg:gap-16 pointer-events-auto">
 						{/* Left side - text content */}
 						<div className={cn('flex-1 space-y-8 flex flex-col justify-between', isDragging && 'blur-[3px]')}>
 							<div className="space-y-5">
