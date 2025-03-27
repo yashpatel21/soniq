@@ -144,7 +144,7 @@ export function FileUpload({ pageIsDragging, onExternalDrop }: FileUploadProps) 
 			<div
 				{...getRootProps()}
 				className={cn(
-					'relative rounded-lg border transition-all duration-200',
+					'relative rounded-lg border transition-all duration-200 w-full',
 					error && 'border-destructive bg-destructive/10',
 					isDragActive && !error && 'border-primary bg-primary/5',
 					isProcessing && !error && !isDragActive && 'border-primary bg-primary/5',
@@ -152,7 +152,7 @@ export function FileUpload({ pageIsDragging, onExternalDrop }: FileUploadProps) 
 				)}
 			>
 				<input {...getInputProps()} />
-				<div className="flex flex-col items-center justify-center gap-3 py-8 px-4 text-center min-h-[180px]">
+				<div className="flex flex-col items-center justify-center gap-3 py-6 px-4 text-center min-h-[160px]">
 					{isProcessing && !error ? (
 						<>
 							<div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary/20">
@@ -185,12 +185,12 @@ export function FileUpload({ pageIsDragging, onExternalDrop }: FileUploadProps) 
 						</>
 					) : isDragActive ? (
 						<>
-							<div className="w-12 h-12 rounded-full flex items-center justify-center bg-primary/20">
-								<Music className="h-6 w-6 text-primary" />
+							<div className="w-14 h-14 rounded-full flex items-center justify-center bg-primary/20">
+								<Music className="h-7 w-7 text-primary" />
 							</div>
 							<div>
-								<p className="text-lg font-medium text-primary">Drop your audio file</p>
-								<p className="text-sm text-primary/80 mt-0.5">Release to upload and start analysis</p>
+								<p className="text-xl font-medium text-primary">Drop your audio file</p>
+								<p className="text-sm text-primary/80 mt-1">Release to upload and start analysis</p>
 							</div>
 						</>
 					) : (

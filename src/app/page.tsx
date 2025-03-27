@@ -65,13 +65,20 @@ export default function Home() {
 			{isDragging && <div className="fixed inset-0 bg-background/70 backdrop-blur-[4px] z-10 pointer-events-none"></div>}
 
 			{/* Reusable header */}
-			<MainHeader isBlurred={isDragging} />
+			<div className="relative z-10">
+				<MainHeader isBlurred={isDragging} />
+			</div>
 
 			{/* Hero section */}
-			<main className="flex-1 flex items-center justify-center py-6">
-				<div className="container max-w-7xl px-4 md:px-6 flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+			<main className="absolute inset-0 flex items-center justify-center pointer-events-none">
+				<div className="container max-w-7xl px-4 md:px-6 flex flex-col lg:flex-row items-start gap-12 lg:gap-20 pointer-events-auto">
 					{/* Left side - text content */}
-					<div className={cn('flex-1 space-y-8', isDragging && 'opacity-30 transition-opacity duration-300 blur-[3px]')}>
+					<div
+						className={cn(
+							'flex-1 space-y-8 flex flex-col justify-between',
+							isDragging && 'opacity-30 transition-opacity duration-300 blur-[3px]'
+						)}
+					>
 						<div className="space-y-5">
 							<Badge variant="secondary" className="px-3 py-1 text-xs rounded-full">
 								AI-Powered Audio Analysis
@@ -101,7 +108,7 @@ export default function Home() {
 							</p>
 						</div>
 
-						<div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+						<div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mt-11">
 							<div className="flex flex-col gap-1.5 group">
 								<div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
 									<Wand2 className="h-5 w-5" />
@@ -129,10 +136,17 @@ export default function Home() {
 					</div>
 
 					{/* Right side - file upload */}
-					<div className={cn('w-full lg:w-auto lg:min-w-[450px] relative', isDragging && 'z-20')}>
-						<Card className="bg-accent/30 border-border/40">
-							<CardContent className="p-6">
-								<div className={cn('mb-4', isDragging && 'opacity-0 absolute pointer-events-none')}>
+					<div
+						className={cn(
+							'w-full lg:w-[450px] relative',
+							isDragging
+								? 'fixed top-1/2 -translate-y-1/2 right-1/2 translate-x-1/2 lg:right-auto lg:translate-x-0 lg:left-[calc(50%+170px)] z-20'
+								: 'self-start mt-6'
+						)}
+					>
+						<Card className="bg-accent/30 border-border/40 w-full">
+							<CardContent className="px-6 pt-4 pb-3">
+								<div className={cn('mb-3', isDragging && 'opacity-0 absolute pointer-events-none')}>
 									<div className="flex items-start gap-3 mb-1">
 										<div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary/10 text-primary">
 											<AudioWaveform className="h-5 w-5" />
@@ -145,7 +159,7 @@ export default function Home() {
 										</div>
 									</div>
 								</div>
-								<div ref={fileUploadRef}>
+								<div ref={fileUploadRef} className="w-full">
 									<FileUpload pageIsDragging={isDragging} />
 								</div>
 							</CardContent>
