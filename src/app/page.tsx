@@ -5,8 +5,7 @@ import { MainHeader } from '@/components/MainHeader'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Wand2, Scissors, FileMusic, AudioWaveform } from 'lucide-react'
-import { useCallback, useState, useRef } from 'react'
-import { useDropzone } from 'react-dropzone'
+import { useCallback, useState, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils/ui/utils'
 import { WavyBackground } from '@/components/ui/wavy-background'
 
@@ -30,25 +29,70 @@ export default function Home() {
 	const [isDragging, setIsDragging] = useState(false)
 	const fileUploadRef = useRef<HTMLDivElement>(null)
 
-	// Handle files dropped anywhere on the page
-	const onPageDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
-		// We will let the FileUpload component handle the actual file processing
-		if (typeof window !== 'undefined' && window.handleExternalFileUpload) {
-			window.handleExternalFileUpload(acceptedFiles, rejectedFiles)
+	// Handle files dropped anywhere on the page using document-level event listeners
+	useEffect(() => {
+		// Event handlers for drag-n-drop
+		const handleDragEnter = (e: DragEvent) => {
+			e.preventDefault()
+			setIsDragging(true)
 		}
-		setIsDragging(false)
-	}, [])
 
-	// Set up page-wide drop zone that delegates to the FileUpload component
-	const { getRootProps, isDragActive } = useDropzone({
-		onDragEnter: () => setIsDragging(true),
-		onDragLeave: () => setIsDragging(false),
-		onDrop: onPageDrop,
-		accept: ACCEPTED_FILE_TYPES,
-		maxSize: MAX_FILE_SIZE,
-		noClick: true,
-		noKeyboard: true,
-	})
+		const handleDragLeave = (e: DragEvent) => {
+			e.preventDefault()
+			// Only set to false if we're leaving the document
+			if (!e.relatedTarget) {
+				setIsDragging(false)
+			}
+		}
+
+		const handleDragOver = (e: DragEvent) => {
+			e.preventDefault()
+		}
+
+		const handleDrop = (e: DragEvent) => {
+			e.preventDefault()
+			setIsDragging(false)
+
+			// Convert FileList to Array
+			const files = Array.from(e.dataTransfer?.files || [])
+
+			// Process the files
+			if (files.length > 0 && window.handleExternalFileUpload) {
+				// Filter for accepted file types
+				const acceptedFiles: File[] = []
+				const rejectedFiles: any[] = []
+
+				files.forEach((file) => {
+					const fileType = file.type
+					if (Object.keys(ACCEPTED_FILE_TYPES).includes(fileType) && file.size <= MAX_FILE_SIZE) {
+						acceptedFiles.push(file)
+					} else {
+						rejectedFiles.push({
+							file,
+							errors: [fileType ? { code: 'file-invalid-type' } : { code: 'file-too-large' }],
+						})
+					}
+				})
+
+				window.handleExternalFileUpload(acceptedFiles, rejectedFiles)
+			}
+		}
+
+		// Add event listeners
+		document.addEventListener('dragenter', handleDragEnter)
+		document.addEventListener('dragleave', handleDragLeave)
+		document.addEventListener('dragover', handleDragOver)
+		document.addEventListener('drop', handleDrop)
+
+		// Clean up
+		return () => {
+			document.removeEventListener('dragenter', handleDragEnter)
+			document.removeEventListener('dragleave', handleDragLeave)
+			document.removeEventListener('dragover', handleDragOver)
+			document.removeEventListener('drop', handleDrop)
+			setIsDragging(false)
+		}
+	}, [])
 
 	return (
 		<div className="min-h-screen overflow-hidden relative">
@@ -66,16 +110,12 @@ export default function Home() {
 				/>
 			</div>
 
-			<div {...getRootProps()} className="min-h-screen flex flex-col bg-background/80 overflow-hidden relative">
-				{/* Decorative elements */}
-				<div className="absolute top-40 right-[5%] w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 animate-pulse"></div>
-				<div
-					className="absolute bottom-20 left-[10%] w-72 h-72 bg-primary/5 rounded-full blur-3xl -z-10 animate-pulse"
-					style={{ animationDelay: '1s', animationDuration: '8s' }}
-				></div>
+			{/* Overlay when dragging (matching dialog box behavior) */}
+			{isDragging && <div className="fixed inset-0 bg-background/80 backdrop-blur-xl z-40" />}
 
+			<div className="min-h-screen flex flex-col overflow-hidden relative bg-background/80">
 				{/* Header */}
-				<div className={cn('relative z-10', isDragging && 'blur-[3px]')}>
+				<div className="relative z-10">
 					<MainHeader />
 				</div>
 
@@ -83,7 +123,7 @@ export default function Home() {
 				<main className="absolute inset-0 flex items-center justify-center pointer-events-none">
 					<div className="container max-w-6xl px-6 md:px-8 lg:px-10 flex flex-col lg:flex-row items-start gap-10 lg:gap-16 pointer-events-auto">
 						{/* Left side - text content */}
-						<div className={cn('flex-1 space-y-8 flex flex-col justify-between', isDragging && 'blur-[3px]')}>
+						<div className="flex-1 space-y-8 flex flex-col justify-between">
 							<div className="space-y-5">
 								<Badge variant="secondary" className="px-3 py-1 text-xs rounded-full">
 									AI-Powered Audio Analysis
@@ -141,13 +181,13 @@ export default function Home() {
 						</div>
 
 						{/* Right side - file upload */}
-						<div className="w-full lg:w-[450px] self-start mt-6 relative z-20 bg-background/60 rounded-xl">
+						<div className="w-full lg:w-[450px] self-start mt-6 relative z-50 bg-background/60 rounded-xl">
 							<Card className="bg-accent/30 border-border/40 w-full">
 								<CardContent className="px-6 pt-4 pb-3">
 									<div className="mb-3">
 										<div className="flex items-start gap-3 mb-1">
-											<div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary/10 text-primary">
-												<AudioWaveform className="h-5 w-5" />
+											<div className="min-w-10 min-h-10 w-10 h-10 rounded-full flex items-center justify-center bg-primary/10 text-primary shrink-0">
+												<AudioWaveform size={20} strokeWidth={2} className="h-5 w-5" />
 											</div>
 											<div>
 												<h2 className="text-lg font-medium">Get Started</h2>
