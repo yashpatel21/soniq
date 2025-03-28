@@ -106,3 +106,70 @@ export async function decodeAudioFromFile(filePath: string): Promise<DecodedAudi
 		throw error
 	}
 }
+
+/**
+ * Resamples audio without requiring Web Audio API (server-compatible)
+ * Uses linear interpolation for simplicity and compatibility
+ *
+ * @param audioBuffer - The audio buffer to resample
+ * @param targetSampleRate - The target sample rate
+ * @returns A new AudioBuffer with the target sample rate
+ */
+export function resampleAudio(audioBuffer: AudioBuffer, targetSampleRate: number): AudioBuffer {
+	// Skip resampling if already at target rate
+	if (audioBuffer.sampleRate === targetSampleRate) {
+		return audioBuffer
+	}
+
+	// Calculate ratio between original and target rates
+	const ratio = targetSampleRate / audioBuffer.sampleRate
+
+	// Calculate new length
+	const newLength = Math.round(audioBuffer.length * ratio)
+
+	// Create output buffer with matching channel count
+	const outputBuffer = {
+		numberOfChannels: audioBuffer.numberOfChannels,
+		length: newLength,
+		sampleRate: targetSampleRate,
+		duration: newLength / targetSampleRate,
+		getChannelData: function (channel: number) {
+			return this._channelData[channel]
+		},
+		_channelData: [] as Float32Array[],
+	}
+
+	// Process each channel
+	for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+		// Get source channel data
+		const inputData = audioBuffer.getChannelData(channel)
+		// Create output channel data
+		const outputData = new Float32Array(newLength)
+
+		// Linear interpolation resampling
+		for (let i = 0; i < newLength; i++) {
+			// Find the position in the original buffer
+			const position = i / ratio
+
+			// Get the two closest samples
+			const index = Math.floor(position)
+			const fraction = position - index
+
+			// Standard linear interpolation
+			if (index + 1 < inputData.length) {
+				outputData[i] = (1 - fraction) * inputData[index] + fraction * inputData[index + 1]
+			} else {
+				outputData[i] = inputData[index]
+			}
+		}
+
+		// Store the resampled channel data
+		outputBuffer._channelData.push(outputData)
+	}
+
+	// Create a mimicked AudioBuffer object
+	const result = outputBuffer as unknown as AudioBuffer
+
+	console.log(`Resampled audio from ${audioBuffer.sampleRate}Hz to ${targetSampleRate}Hz`)
+	return result
+}

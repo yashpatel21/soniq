@@ -21,9 +21,10 @@ interface StemsContainerProps {
 	stemsData: StemsData | undefined
 	isLoading: boolean
 	isError: boolean
+	sessionId: string
 }
 
-export function StemsContainer({ stemsData, isLoading, isError }: StemsContainerProps) {
+export function StemsContainer({ stemsData, isLoading, isError, sessionId }: StemsContainerProps) {
 	const [activeFilter, setActiveFilter] = useState<string | null>(null)
 
 	// Get the stems data if available
@@ -173,7 +174,7 @@ export function StemsContainer({ stemsData, isLoading, isError }: StemsContainer
 				{stemsData?.status === 'completed' && stemsData.stems && Object.keys(stemsData.stems).length > 0 && (
 					<div className="grid gap-3 p-3 pb-8">
 						{filteredStems.map(([stemName, stemUrl]) => (
-							<StemPlayer key={stemName} stemName={stemName} stemUrl={stemUrl} />
+							<StemPlayer key={stemName} stemName={stemName} stemUrl={stemUrl} sessionId={sessionId} />
 						))}
 					</div>
 				)}

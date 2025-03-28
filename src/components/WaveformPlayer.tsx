@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef, useLayoutEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Card } from '@/components/ui/card'
-import { Play, Pause, Volume2, VolumeX, Download } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Play, Pause, Volume2, VolumeX, Download, FileMusic } from 'lucide-react'
 import { formatTime } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import WaveSurfer from 'wavesurfer.js'
 
 // Use a safe version of useLayoutEffect that falls back to useEffect in SSR
@@ -28,6 +30,7 @@ const globalStyles = `
 interface WaveformPlayerProps {
 	stemName: string
 	stemUrl: string
+	sessionId: string
 	waveColor?: string
 	progressColor?: string
 	className?: string
@@ -36,6 +39,7 @@ interface WaveformPlayerProps {
 export function WaveformPlayer({
 	stemName,
 	stemUrl,
+	sessionId,
 	waveColor = 'rgb(148, 163, 184)',
 	progressColor = 'rgb(79, 70, 229)',
 	className = '',
@@ -50,6 +54,8 @@ export function WaveformPlayer({
 	const [error, setError] = useState<string | null>(null)
 	const [containerReady, setContainerReady] = useState(false)
 	const [isHoveringDownload, setIsHoveringDownload] = useState(false)
+	const [isHoveringMidi, setIsHoveringMidi] = useState(false)
+	const [isExtractingMidi, setIsExtractingMidi] = useState(false)
 
 	// Refs
 	const containerRef = useRef<HTMLDivElement>(null)
@@ -317,8 +323,71 @@ export function WaveformPlayer({
 			document.body.appendChild(link)
 			link.click()
 			document.body.removeChild(link)
+
+			// Show success message
+			toast.success(`Downloaded ${stemName} audio file`)
 		} catch (e) {
 			console.error('Error downloading file:', e)
+			toast.error('Failed to download audio file')
+		}
+	}
+
+	// Handle MIDI extraction
+	const handleMidiExtraction = async () => {
+		if (isExtractingMidi) return
+
+		try {
+			setIsExtractingMidi(true)
+			toast.info(`Extracting MIDI from ${stemName}...`, { duration: 2000 })
+
+			// Call the API endpoint using the provided sessionId
+			const response = await fetch('/api/extract-midi', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					sessionId,
+					stemName,
+				}),
+			})
+
+			if (!response.ok) {
+				// For error responses, try to parse JSON
+				try {
+					const errorData = await response.json()
+					throw new Error(errorData.error || 'Failed to extract MIDI')
+				} catch (parseError) {
+					throw new Error('Failed to extract MIDI')
+				}
+			}
+
+			// Get filename from Content-Disposition header if available
+			const contentDisposition = response.headers.get('Content-Disposition')
+			const fileName = contentDisposition ? contentDisposition.split('filename=')[1]?.replace(/"/g, '') : `${stemName}.mid`
+
+			// Convert the response blob to a downloadable URL
+			const blob = await response.blob()
+			const url = window.URL.createObjectURL(blob)
+
+			// Create and trigger download
+			const link = document.createElement('a')
+			link.href = url
+			link.download = fileName || `${stemName}.mid`
+			document.body.appendChild(link)
+			link.click()
+
+			// Clean up
+			document.body.removeChild(link)
+			window.URL.revokeObjectURL(url)
+
+			// Show success message
+			toast.success(`MIDI extraction complete for ${stemName}`)
+		} catch (e) {
+			console.error('Error extracting MIDI:', e)
+			toast.error(e instanceof Error ? e.message : 'Failed to extract MIDI')
+		} finally {
+			setIsExtractingMidi(false)
 		}
 	}
 
@@ -364,19 +433,59 @@ export function WaveformPlayer({
 					<span className="text-lg font-medium line-clamp-1">{stemName}</span>
 				</div>
 
-				<Button
-					variant="ghost"
-					size="icon"
-					onClick={handleDownload}
-					className={cn(
-						'h-7 w-7 rounded-full',
-						isHoveringDownload ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted/80'
-					)}
-					onMouseEnter={() => setIsHoveringDownload(true)}
-					onMouseLeave={() => setIsHoveringDownload(false)}
-				>
-					<Download className="h-4 w-4" />
-				</Button>
+				<div className="flex items-center gap-1">
+					<TooltipProvider>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									variant="ghost"
+									size="icon"
+									onClick={handleDownload}
+									className={cn(
+										'h-7 w-7 rounded-full',
+										isHoveringDownload
+											? 'bg-primary text-primary-foreground shadow-sm'
+											: 'text-muted-foreground hover:bg-muted/80'
+									)}
+									onMouseEnter={() => setIsHoveringDownload(true)}
+									onMouseLeave={() => setIsHoveringDownload(false)}
+								>
+									<Download className="h-4 w-4" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>
+								<p>Download {stemName}</p>
+							</TooltipContent>
+						</Tooltip>
+					</TooltipProvider>
+
+					<TooltipProvider>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									variant="ghost"
+									size="icon"
+									onClick={handleMidiExtraction}
+									disabled={isExtractingMidi}
+									className={cn(
+										'h-7 w-7 rounded-full',
+										isExtractingMidi && 'opacity-50 cursor-not-allowed',
+										isHoveringMidi && !isExtractingMidi
+											? 'bg-primary text-primary-foreground shadow-sm'
+											: 'text-muted-foreground hover:bg-muted/80'
+									)}
+									onMouseEnter={() => setIsHoveringMidi(true)}
+									onMouseLeave={() => setIsHoveringMidi(false)}
+								>
+									<FileMusic className={cn('h-4 w-4', isExtractingMidi && 'animate-pulse')} />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>
+								<p>{isExtractingMidi ? 'Extracting MIDI...' : `Extract MIDI from ${stemName}`}</p>
+							</TooltipContent>
+						</Tooltip>
+					</TooltipProvider>
+				</div>
 			</div>
 
 			{/* Waveform container */}

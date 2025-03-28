@@ -5,8 +5,7 @@ import { MainHeader } from '@/components/MainHeader'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Wand2, Scissors, FileMusic, AudioWaveform } from 'lucide-react'
-import { useCallback, useState, useRef, useEffect } from 'react'
-import { cn } from '@/lib/utils/ui/utils'
+import { useState, useRef, useEffect } from 'react'
 import { WavyBackground } from '@/components/ui/wavy-background'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB in bytes

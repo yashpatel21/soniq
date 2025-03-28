@@ -114,7 +114,12 @@ export default function AnalysisPage() {
 								/>
 							)}
 							{activeTab === 'stems' && (
-								<StemsContainer stemsData={stemsQuery.data} isLoading={stemsQuery.isLoading} isError={stemsQuery.isError} />
+								<StemsContainer
+									stemsData={stemsQuery.data}
+									isLoading={stemsQuery.isLoading}
+									isError={stemsQuery.isError}
+									sessionId={sessionId}
+								/>
 							)}
 						</div>
 					</div>

@@ -4,10 +4,11 @@ import { WaveformPlayer } from './WaveformPlayer'
 interface StemPlayerProps {
 	stemName: string
 	stemUrl: string
+	sessionId: string
 	stemColor?: string
 }
 
-export function StemPlayer({ stemName, stemUrl, stemColor }: StemPlayerProps) {
+export function StemPlayer({ stemName, stemUrl, sessionId, stemColor }: StemPlayerProps) {
 	// Get stem color based on stem name
 	const getColorForStem = () => {
 		if (stemColor) return stemColor
@@ -31,6 +32,7 @@ export function StemPlayer({ stemName, stemUrl, stemColor }: StemPlayerProps) {
 			<WaveformPlayer
 				stemName={stemName}
 				stemUrl={stemUrl}
+				sessionId={sessionId}
 				waveColor="rgb(148, 163, 184)"
 				progressColor={progressColor}
 				className="transform transition-all duration-300 hover:scale-[1.005] hover:shadow-md active:scale-[0.995]"
