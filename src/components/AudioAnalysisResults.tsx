@@ -2,8 +2,8 @@ import React from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Activity, Clock, Music2, AlertTriangle, Lightbulb, AudioWaveform } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Activity, Music2, AlertTriangle, Lightbulb, AudioWaveform } from 'lucide-react'
+import { cn } from '@/lib/utils/ui/utils'
 import { Badge } from '@/components/ui/badge'
 
 interface AudioAnalysisData {
@@ -121,12 +121,6 @@ export function AudioAnalysisResults({ analysisData, isLoading, isError }: Audio
 		return keyMap[camelotCode] || camelotCode
 	}
 
-	// Calculate tempo animation duration based on BPM
-	const calculateTempoDuration = (bpm: number): string => {
-		const normalizedBpm = Math.min(Math.max(bpm, 60), 200)
-		return `${60 / normalizedBpm}s`
-	}
-
 	// Format key and scale into a readable string
 	const formatKeyScale = (key: string, scale: string): string => {
 		return `${key} ${scale.toLowerCase()}`
@@ -240,12 +234,8 @@ export function AudioAnalysisResults({ analysisData, isLoading, isError }: Audio
 							subValue="BPM"
 							iconBgClass="bg-primary/10 relative"
 							iconTextClass="text-primary"
-							ringClass="absolute inset-0 rounded-full border-2 border-primary/40 animate-subtle-ping"
-							customStyle={
-								{
-									'--tempo-duration': calculateTempoDuration(analysisData.analysisResults.bpm),
-								} as React.CSSProperties
-							}
+							ringClass="absolute inset-0 rounded-full border-2 border-primary/40 animate-tempo-ping"
+							dataTempoBpm={analysisData.analysisResults.bpm}
 						/>
 
 						{/* Combined Key+Scale card */}
@@ -285,6 +275,7 @@ interface AnalysisResultProps {
 	customStyle?: React.CSSProperties
 	ringClass?: string
 	hasLongText?: boolean
+	dataTempoBpm?: number
 }
 
 function AnalysisResult({
@@ -297,11 +288,25 @@ function AnalysisResult({
 	customStyle,
 	ringClass,
 	hasLongText,
+	dataTempoBpm,
 }: AnalysisResultProps) {
+	// Calculate tempo animation duration if BPM is provided
+	let tempoDuration: string | undefined
+	if (dataTempoBpm) {
+		const normalizedBpm = Math.min(Math.max(dataTempoBpm, 60), 200)
+		tempoDuration = `${60 / normalizedBpm}s`
+	}
+
 	return (
 		<Card className="border border-border/40 bg-accent/30">
 			<CardContent className="p-4 flex flex-col items-center justify-center text-center">
-				<div className={cn('rounded-full p-2.5 flex-shrink-0 my-2', iconBgClass, iconTextClass)} style={customStyle}>
+				<div
+					className={cn('rounded-full p-2.5 flex-shrink-0 my-2', iconBgClass, iconTextClass)}
+					style={{
+						...customStyle,
+						...(tempoDuration ? ({ '--tempo-duration': tempoDuration } as React.CSSProperties) : {}),
+					}}
+				>
 					{ringClass && <div className={ringClass}></div>}
 					{icon}
 				</div>

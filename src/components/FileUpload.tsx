@@ -143,13 +143,12 @@ export function FileUpload({ pageIsDragging, onExternalDrop }: FileUploadProps) 
 			<div
 				{...getRootProps()}
 				className={cn(
-					'relative rounded-lg border w-full transition-all duration-200',
+					'relative rounded-lg border w-full transition-all duration-200 h-56',
 					error && 'border-destructive bg-destructive/10',
 					isSuccess && 'border-green-500 bg-green-500/10',
 					isProcessing && !error && 'border-primary bg-primary/5',
 					!isProcessing && !isSuccess && !error && 'border-border hover:bg-accent/50'
 				)}
-				style={{ height: '220px' }}
 			>
 				<input {...getInputProps()} />
 				<div className="flex flex-col items-center justify-center px-5 text-center w-full h-full">

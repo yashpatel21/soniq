@@ -4,28 +4,15 @@ import { Slider } from '@/components/ui/slider'
 import { Card } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Play, Pause, Volume2, VolumeX, Download, FileMusic } from 'lucide-react'
-import { formatTime } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { formatTime } from '@/lib/utils/ui/utils'
+import { cn } from '@/lib/utils/ui/utils'
 import { toast } from 'sonner'
 import WaveSurfer from 'wavesurfer.js'
+import { createDownloadableMidiFromAudioBuffer } from '@/lib/utils/midi/midiExtraction'
+import { convertToMonoAndResample } from '@/lib/utils/audio/clientAudioProcessing'
 
 // Use a safe version of useLayoutEffect that falls back to useEffect in SSR
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
-
-// Define global styles for the stem-colored slider
-const globalStyles = `
-.stem-colored-slider [data-slot="slider-track"] {
-  background-color: var(--slider-track, rgba(148, 163, 184, 0.2));
-}
-
-.stem-colored-slider [data-slot="slider-range"] {
-  background-color: var(--slider-range, rgb(79, 70, 229));
-}
-
-.stem-colored-slider [data-slot="slider-thumb"] {
-  border-color: var(--slider-thumb, rgb(79, 70, 229));
-}
-`
 
 interface WaveformPlayerProps {
 	stemName: string
@@ -56,31 +43,13 @@ export function WaveformPlayer({
 	const [isHoveringDownload, setIsHoveringDownload] = useState(false)
 	const [isHoveringMidi, setIsHoveringMidi] = useState(false)
 	const [isExtractingMidi, setIsExtractingMidi] = useState(false)
+	const [audioSampleRate, setAudioSampleRate] = useState(44100) // Default to 44.1kHz as fallback
 
 	// Refs
 	const containerRef = useRef<HTMLDivElement>(null)
 	const wavesurferRef = useRef<WaveSurfer | null>(null)
 	const timeUpdateIntervalRef = useRef<number | null>(null)
 	const isCleanedUpRef = useRef(false)
-
-	// Add global styles to the document head once when the component is first mounted
-	useEffect(() => {
-		if (typeof document === 'undefined') return
-
-		const styleId = 'stem-colored-slider-styles'
-		if (!document.getElementById(styleId)) {
-			const styleEl = document.createElement('style')
-			styleEl.id = styleId
-			styleEl.innerHTML = globalStyles
-			document.head.appendChild(styleEl)
-			return () => {
-				const element = document.getElementById(styleId)
-				if (element) {
-					element.remove()
-				}
-			}
-		}
-	}, [])
 
 	// First, ensure container is properly sized and ready before WaveSurfer initialization
 	useIsomorphicLayoutEffect(() => {
@@ -121,6 +90,8 @@ export function WaveformPlayer({
 
 		// Create and configure WaveSurfer instance
 		try {
+			if (!containerRef.current) return
+
 			const ws = WaveSurfer.create({
 				container: containerRef.current,
 				height: 24,
@@ -132,6 +103,7 @@ export function WaveformPlayer({
 				cursorWidth: 2,
 				cursorColor: 'rgba(255, 255, 255, 0.5)',
 				normalize: true,
+				sampleRate: 44100, // Use standard CD-quality sample rate
 			})
 
 			// Save reference
@@ -317,15 +289,64 @@ export function WaveformPlayer({
 	// Handle download
 	const handleDownload = () => {
 		try {
+			// First create a link with the source URL
 			const link = document.createElement('a')
 			link.href = stemUrl
-			link.download = `${stemName}.mp3`
-			document.body.appendChild(link)
-			link.click()
-			document.body.removeChild(link)
+			console.log('stemUrl', stemUrl)
 
-			// Show success message
-			toast.success(`Downloaded ${stemName} audio file`)
+			// Determine file extension based on content-type
+			const determineExtension = async () => {
+				try {
+					// Make a HEAD request to get content-type
+					const response = await fetch(stemUrl, { method: 'HEAD' })
+					const contentType = response.headers.get('content-type') || ''
+					console.log('Content-Type:', contentType)
+
+					// Map content type to extension
+					let fileExtension = '.mp3' // Default fallback
+					if (contentType.includes('audio/wav') || contentType.includes('audio/x-wav')) {
+						fileExtension = '.wav'
+					} else if (contentType.includes('audio/ogg')) {
+						fileExtension = '.ogg'
+					} else if (contentType.includes('audio/mp4') || contentType.includes('audio/x-m4a')) {
+						fileExtension = '.m4a'
+					} else if (contentType.includes('audio/flac')) {
+						fileExtension = '.flac'
+					} else if (contentType.includes('audio/mpeg')) {
+						fileExtension = '.mp3'
+					}
+
+					// Complete the download with the determined extension
+					link.download = `${stemName}${fileExtension}`
+					document.body.appendChild(link)
+					link.click()
+					document.body.removeChild(link)
+
+					// Show success message
+					toast.success(`Downloaded ${stemName} audio file`)
+				} catch (error) {
+					// Fallback to URL-based extension if header request fails
+					console.warn('Could not detect content-type, falling back to URL pattern', error)
+
+					// Try to determine extension from URL
+					let fileExtension = '.mp3' // Default fallback
+					if (stemUrl.includes('.wav')) fileExtension = '.wav'
+					else if (stemUrl.includes('.ogg')) fileExtension = '.ogg'
+					else if (stemUrl.includes('.m4a')) fileExtension = '.m4a'
+					else if (stemUrl.includes('.flac')) fileExtension = '.flac'
+
+					link.download = `${stemName}${fileExtension}`
+					document.body.appendChild(link)
+					link.click()
+					document.body.removeChild(link)
+
+					// Show success message
+					toast.success(`Downloaded ${stemName} audio file`)
+				}
+			}
+
+			// Execute the async function
+			determineExtension()
 		} catch (e) {
 			console.error('Error downloading file:', e)
 			toast.error('Failed to download audio file')
@@ -334,46 +355,22 @@ export function WaveformPlayer({
 
 	// Handle MIDI extraction
 	const handleMidiExtraction = async () => {
-		if (isExtractingMidi) return
+		if (isExtractingMidi || !wavesurferRef.current || !isReady) return
 
 		try {
 			setIsExtractingMidi(true)
-			toast.info(`Extracting MIDI from ${stemName}...`, { duration: 2000 })
+			toast.info(`Extracting MIDI from ${stemName}...`)
 
-			// Call the API endpoint using the provided sessionId
-			const response = await fetch('/api/extract-midi', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					sessionId,
-					stemName,
-				}),
-			})
+			// Convert audio to mono and resample to 22050Hz
+			const processedAudioBuffer = await convertToMonoAndResample(wavesurferRef.current)
 
-			if (!response.ok) {
-				// For error responses, try to parse JSON
-				try {
-					const errorData = await response.json()
-					throw new Error(errorData.error || 'Failed to extract MIDI')
-				} catch (parseError) {
-					throw new Error('Failed to extract MIDI')
-				}
-			}
-
-			// Get filename from Content-Disposition header if available
-			const contentDisposition = response.headers.get('Content-Disposition')
-			const fileName = contentDisposition ? contentDisposition.split('filename=')[1]?.replace(/"/g, '') : `${stemName}.mid`
-
-			// Convert the response blob to a downloadable URL
-			const blob = await response.blob()
-			const url = window.URL.createObjectURL(blob)
+			// Use our client-side MIDI extraction utility with the processed buffer
+			const { url, filename } = await createDownloadableMidiFromAudioBuffer(processedAudioBuffer, stemName)
 
 			// Create and trigger download
 			const link = document.createElement('a')
 			link.href = url
-			link.download = fileName || `${stemName}.mid`
+			link.download = filename
 			document.body.appendChild(link)
 			link.click()
 

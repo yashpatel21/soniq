@@ -15,15 +15,6 @@ const ACCEPTED_FILE_TYPES = {
 	'audio/flac': ['.flac'],
 }
 
-// CSS keyframes for gradient animation
-const gradientKeyframes = `
-@keyframes gradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-`
-
 export default function Home() {
 	const [isDragging, setIsDragging] = useState(false)
 	const fileUploadRef = useRef<HTMLDivElement>(null)
@@ -130,21 +121,7 @@ export default function Home() {
 								<h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]">
 									Elevate Your{' '}
 									<span className="text-primary relative inline-block">
-										<style>{gradientKeyframes}</style>
-										<span
-											className="relative"
-											style={{
-												background: 'linear-gradient(90deg, #FF0080, #7928CA, #0070F3, #38bdf8, #a855f7)',
-												backgroundSize: '300% 100%',
-												WebkitBackgroundClip: 'text',
-												WebkitTextFillColor: 'transparent',
-												backgroundClip: 'text',
-												display: 'inline-block',
-												animation: 'gradient 4s ease infinite',
-											}}
-										>
-											Sound
-										</span>
+										<span className="animate-gradient-text">Sound</span>
 									</span>
 								</h1>
 								<p className="text-xl text-muted-foreground font-light max-w-xl">

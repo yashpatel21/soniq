@@ -1,7 +1,7 @@
 'use client'
 
 import React, { forwardRef, useRef } from 'react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils/ui/utils'
 import { AnimatedBeam } from '@/components/magicui/animated-beam'
 import { Music, Brain, Mic, Drum, Guitar, Piano } from 'lucide-react'
 
