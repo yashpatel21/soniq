@@ -10,6 +10,8 @@ import { toast } from 'sonner'
 import WaveSurfer from 'wavesurfer.js'
 import { createDownloadableMidiFromAudioBuffer } from '@/lib/utils/midi/midiExtraction'
 import { convertToMonoAndResample } from '@/lib/utils/audio/clientAudioProcessing'
+import { MidiDialog } from '@/components/MidiDialog'
+import { Midi } from '@tonejs/midi'
 
 // Use a safe version of useLayoutEffect that falls back to useEffect in SSR
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
@@ -44,6 +46,12 @@ export function WaveformPlayer({
 	const [isHoveringMidi, setIsHoveringMidi] = useState(false)
 	const [isExtractingMidi, setIsExtractingMidi] = useState(false)
 	const [audioSampleRate, setAudioSampleRate] = useState(44100) // Default to 44.1kHz as fallback
+
+	// MIDI Dialog state
+	const [midiDialogOpen, setMidiDialogOpen] = useState(false)
+	const [extractedMidi, setExtractedMidi] = useState<Midi | null>(null)
+	const [midiDownloadUrl, setMidiDownloadUrl] = useState<string>('')
+	const [midiFilename, setMidiFilename] = useState<string>('')
 
 	// Refs
 	const containerRef = useRef<HTMLDivElement>(null)
@@ -365,18 +373,15 @@ export function WaveformPlayer({
 			const processedAudioBuffer = await convertToMonoAndResample(wavesurferRef.current)
 
 			// Use our client-side MIDI extraction utility with the processed buffer
-			const { url, filename } = await createDownloadableMidiFromAudioBuffer(processedAudioBuffer, stemName)
+			const { url, filename, midiObject } = await createDownloadableMidiFromAudioBuffer(processedAudioBuffer, stemName)
 
-			// Create and trigger download
-			const link = document.createElement('a')
-			link.href = url
-			link.download = filename
-			document.body.appendChild(link)
-			link.click()
+			// Store the extracted MIDI data
+			setExtractedMidi(midiObject)
+			setMidiDownloadUrl(url)
+			setMidiFilename(filename)
 
-			// Clean up
-			document.body.removeChild(link)
-			window.URL.revokeObjectURL(url)
+			// Open the MIDI dialog
+			setMidiDialogOpen(true)
 
 			// Show success message
 			toast.success(`MIDI extraction complete for ${stemName}`)
@@ -422,193 +427,207 @@ export function WaveformPlayer({
 
 	// Normal state
 	return (
-		<Card className={cn('border px-1.5 py-2.5', className)} style={cardStyle}>
-			{/* Header row with title and download */}
-			<div className="flex items-center justify-between mb-0 mt-0.5 relative z-10">
-				<div className="flex items-center gap-1.5">
-					<span className="text-lg">{getStemIcon()}</span>
-					<span className="text-lg font-medium line-clamp-1">{stemName}</span>
+		<>
+			<Card className={cn('border px-1.5 py-2.5', className)} style={cardStyle}>
+				{/* Header row with title and download */}
+				<div className="flex items-center justify-between mb-0 mt-0.5 relative z-10">
+					<div className="flex items-center gap-1.5">
+						<span className="text-lg">{getStemIcon()}</span>
+						<span className="text-lg font-medium line-clamp-1">{stemName}</span>
+					</div>
+
+					<div className="flex items-center gap-1">
+						<TooltipProvider>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={handleDownload}
+										className={cn(
+											'h-7 w-7 rounded-full',
+											isHoveringDownload
+												? 'bg-primary text-primary-foreground shadow-sm'
+												: 'text-muted-foreground hover:bg-muted/80'
+										)}
+										onMouseEnter={() => setIsHoveringDownload(true)}
+										onMouseLeave={() => setIsHoveringDownload(false)}
+									>
+										<Download className="h-4 w-4" />
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p>Download {stemName}</p>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+
+						<TooltipProvider>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={handleMidiExtraction}
+										disabled={isExtractingMidi}
+										className={cn(
+											'h-7 w-7 rounded-full',
+											isExtractingMidi && 'opacity-50 cursor-not-allowed',
+											isHoveringMidi && !isExtractingMidi
+												? 'bg-primary text-primary-foreground shadow-sm'
+												: 'text-muted-foreground hover:bg-muted/80'
+										)}
+										onMouseEnter={() => setIsHoveringMidi(true)}
+										onMouseLeave={() => setIsHoveringMidi(false)}
+									>
+										<FileMusic className={cn('h-4 w-4', isExtractingMidi && 'animate-pulse')} />
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p>{isExtractingMidi ? 'Extracting MIDI...' : `Extract MIDI from ${stemName}`}</p>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+					</div>
 				</div>
 
-				<div className="flex items-center gap-1">
-					<TooltipProvider>
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button
-									variant="ghost"
-									size="icon"
-									onClick={handleDownload}
-									className={cn(
-										'h-7 w-7 rounded-full',
-										isHoveringDownload
-											? 'bg-primary text-primary-foreground shadow-sm'
-											: 'text-muted-foreground hover:bg-muted/80'
-									)}
-									onMouseEnter={() => setIsHoveringDownload(true)}
-									onMouseLeave={() => setIsHoveringDownload(false)}
-								>
-									<Download className="h-4 w-4" />
-								</Button>
-							</TooltipTrigger>
-							<TooltipContent>
-								<p>Download {stemName}</p>
-							</TooltipContent>
-						</Tooltip>
-					</TooltipProvider>
+				{/* Waveform container */}
+				<div ref={containerRef} className="w-full rounded-md overflow-hidden bg-card/50 my-0 relative z-10" />
 
-					<TooltipProvider>
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button
-									variant="ghost"
-									size="icon"
-									onClick={handleMidiExtraction}
-									disabled={isExtractingMidi}
-									className={cn(
-										'h-7 w-7 rounded-full',
-										isExtractingMidi && 'opacity-50 cursor-not-allowed',
-										isHoveringMidi && !isExtractingMidi
-											? 'bg-primary text-primary-foreground shadow-sm'
-											: 'text-muted-foreground hover:bg-muted/80'
-									)}
-									onMouseEnter={() => setIsHoveringMidi(true)}
-									onMouseLeave={() => setIsHoveringMidi(false)}
-								>
-									<FileMusic className={cn('h-4 w-4', isExtractingMidi && 'animate-pulse')} />
-								</Button>
-							</TooltipTrigger>
-							<TooltipContent>
-								<p>{isExtractingMidi ? 'Extracting MIDI...' : `Extract MIDI from ${stemName}`}</p>
-							</TooltipContent>
-						</Tooltip>
-					</TooltipProvider>
-				</div>
-			</div>
-
-			{/* Waveform container */}
-			<div ref={containerRef} className="w-full rounded-md overflow-hidden bg-card/50 my-0 relative z-10" />
-
-			{/* Controls row */}
-			<div className="flex items-center relative text-xs mt-0 mb-0.5 px-1.5 z-10">
-				<Button
-					size="sm"
-					variant={isPlaying ? 'default' : 'secondary'}
-					className={cn(
-						'h-8 w-8 rounded-full p-0 shadow-sm transition-all duration-200',
-						isPlaying
-							? 'text-primary-foreground hover:brightness-110 hover:shadow-md'
-							: 'bg-gradient-to-br from-background/90 to-background/60 hover:shadow-md hover:scale-105 hover:brightness-110',
-						!isReady && 'opacity-50'
-					)}
-					onClick={togglePlayPause}
-					disabled={!isReady}
-					style={
-						isPlaying
-							? ({
-									backgroundColor: progressColor,
-									boxShadow: 'none',
-							  } as React.CSSProperties)
-							: ({
-									borderColor: `${progressColor}40`,
-									background: `linear-gradient(135deg, rgba(${progressColor.match(/\d+/g)?.[0]},${
-										progressColor.match(/\d+/g)?.[1]
-									},${progressColor.match(/\d+/g)?.[2]},0.1), rgba(${progressColor.match(/\d+/g)?.[0]},${
-										progressColor.match(/\d+/g)?.[1]
-									},${progressColor.match(/\d+/g)?.[2]},0.2))`,
-									'--tw-ring-color': `${progressColor}40`,
-									'--tw-ring-offset-shadow':
-										'var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color)',
-									'--tw-ring-shadow':
-										'var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color)',
-							  } as React.CSSProperties)
-					}
-					onMouseEnter={(e) => {
-						if (isPlaying) {
-							e.currentTarget.style.boxShadow = `0 0 0 2px rgba(${progressColor.match(/\d+/g)?.[0]},${
-								progressColor.match(/\d+/g)?.[1]
-							},${progressColor.match(/\d+/g)?.[2]},0.4)`
-						} else {
-							// No ring for play button, just enhance the background
-							e.currentTarget.style.boxShadow = 'none'
-							e.currentTarget.style.background = `linear-gradient(135deg, rgba(${progressColor.match(/\d+/g)?.[0]},${
-								progressColor.match(/\d+/g)?.[1]
-							},${progressColor.match(/\d+/g)?.[2]},0.4), rgba(${progressColor.match(/\d+/g)?.[0]},${
-								progressColor.match(/\d+/g)?.[1]
-							},${progressColor.match(/\d+/g)?.[2]},0.6))`
-							const playIcon = e.currentTarget.querySelector('.h-4.w-4')
-							if (playIcon) {
-								;(playIcon as HTMLElement).style.color = 'white'
-							}
-						}
-					}}
-					onMouseLeave={(e) => {
-						if (isPlaying) {
-							e.currentTarget.style.boxShadow = 'none'
-						} else {
-							e.currentTarget.style.boxShadow = ''
-							e.currentTarget.style.borderColor = `${progressColor}40`
-							e.currentTarget.style.background = `linear-gradient(135deg, rgba(${progressColor.match(/\d+/g)?.[0]},${
-								progressColor.match(/\d+/g)?.[1]
-							},${progressColor.match(/\d+/g)?.[2]},0.1), rgba(${progressColor.match(/\d+/g)?.[0]},${
-								progressColor.match(/\d+/g)?.[1]
-							},${progressColor.match(/\d+/g)?.[2]},0.2))`
-							const playIcon = e.currentTarget.querySelector('.h-4.w-4')
-							if (playIcon) {
-								;(playIcon as HTMLElement).style.color = ''
-							}
-						}
-					}}
-				>
-					{isPlaying ? (
-						<Pause className="h-4 w-4" style={{ color: 'white' }} />
-					) : (
-						<Play className="h-4 w-4" style={{ color: 'white' }} />
-					)}
-				</Button>
-
-				{/* Centered timestamp */}
-				<div className="absolute left-0 right-0 mx-auto w-fit text-center">
-					<span className="text-xs text-muted-foreground">
-						{isReady ? `${formatTime(currentTime)} / ${formatTime(duration)}` : '--:--'}
-					</span>
-				</div>
-
-				{/* Right-aligned volume controls */}
-				<div className="ml-auto flex items-center gap-1.5">
+				{/* Controls row */}
+				<div className="flex items-center relative text-xs mt-0 mb-0.5 px-1.5 z-10">
 					<Button
-						variant="ghost"
-						size="icon"
-						onClick={toggleMute}
+						size="sm"
+						variant={isPlaying ? 'default' : 'secondary'}
 						className={cn(
-							'h-5 w-5 p-0 rounded-full',
-							isMuted ? 'text-muted-foreground/60' : 'text-muted-foreground',
+							'h-8 w-8 rounded-full p-0 shadow-sm transition-all duration-200',
+							isPlaying
+								? 'text-primary-foreground hover:brightness-110 hover:shadow-md'
+								: 'bg-gradient-to-br from-background/90 to-background/60 hover:shadow-md hover:scale-105 hover:brightness-110',
 							!isReady && 'opacity-50'
 						)}
-						disabled={!isReady}
-					>
-						{isMuted ? <VolumeX className="h-2.5 w-2.5" /> : <Volume2 className="h-2.5 w-2.5" />}
-					</Button>
-
-					<Slider
-						value={[isMuted ? 0 : volume * 100]}
-						max={100}
-						step={1}
-						className={cn('cursor-pointer h-1 w-12 sm:w-16 stem-colored-slider', !isReady && 'opacity-50')}
-						onValueChange={handleVolumeChange}
+						onClick={togglePlayPause}
 						disabled={!isReady}
 						style={
-							{
-								// Dark background with a subtle hint of the stem color
-								'--slider-track': `rgba(${progressColor.match(/\d+/g)?.[0]},${progressColor.match(/\d+/g)?.[1]},${
-									progressColor.match(/\d+/g)?.[2]
-								},0.08)`,
-								'--slider-range': progressColor,
-								'--slider-thumb': progressColor,
-							} as React.CSSProperties
+							isPlaying
+								? ({
+										backgroundColor: progressColor,
+										boxShadow: 'none',
+								  } as React.CSSProperties)
+								: ({
+										borderColor: `${progressColor}40`,
+										background: `linear-gradient(135deg, rgba(${progressColor.match(/\d+/g)?.[0]},${
+											progressColor.match(/\d+/g)?.[1]
+										},${progressColor.match(/\d+/g)?.[2]},0.1), rgba(${progressColor.match(/\d+/g)?.[0]},${
+											progressColor.match(/\d+/g)?.[1]
+										},${progressColor.match(/\d+/g)?.[2]},0.2))`,
+										'--tw-ring-color': `${progressColor}40`,
+										'--tw-ring-offset-shadow':
+											'var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color)',
+										'--tw-ring-shadow':
+											'var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color)',
+								  } as React.CSSProperties)
 						}
-					/>
+						onMouseEnter={(e) => {
+							if (isPlaying) {
+								e.currentTarget.style.boxShadow = `0 0 0 2px rgba(${progressColor.match(/\d+/g)?.[0]},${
+									progressColor.match(/\d+/g)?.[1]
+								},${progressColor.match(/\d+/g)?.[2]},0.4)`
+							} else {
+								// No ring for play button, just enhance the background
+								e.currentTarget.style.boxShadow = 'none'
+								e.currentTarget.style.background = `linear-gradient(135deg, rgba(${progressColor.match(/\d+/g)?.[0]},${
+									progressColor.match(/\d+/g)?.[1]
+								},${progressColor.match(/\d+/g)?.[2]},0.4), rgba(${progressColor.match(/\d+/g)?.[0]},${
+									progressColor.match(/\d+/g)?.[1]
+								},${progressColor.match(/\d+/g)?.[2]},0.6))`
+								const playIcon = e.currentTarget.querySelector('.h-4.w-4')
+								if (playIcon) {
+									;(playIcon as HTMLElement).style.color = 'white'
+								}
+							}
+						}}
+						onMouseLeave={(e) => {
+							if (isPlaying) {
+								e.currentTarget.style.boxShadow = 'none'
+							} else {
+								e.currentTarget.style.boxShadow = ''
+								e.currentTarget.style.borderColor = `${progressColor}40`
+								e.currentTarget.style.background = `linear-gradient(135deg, rgba(${progressColor.match(/\d+/g)?.[0]},${
+									progressColor.match(/\d+/g)?.[1]
+								},${progressColor.match(/\d+/g)?.[2]},0.1), rgba(${progressColor.match(/\d+/g)?.[0]},${
+									progressColor.match(/\d+/g)?.[1]
+								},${progressColor.match(/\d+/g)?.[2]},0.2))`
+								const playIcon = e.currentTarget.querySelector('.h-4.w-4')
+								if (playIcon) {
+									;(playIcon as HTMLElement).style.color = ''
+								}
+							}
+						}}
+					>
+						{isPlaying ? (
+							<Pause className="h-4 w-4" style={{ color: 'white' }} />
+						) : (
+							<Play className="h-4 w-4" style={{ color: 'white' }} />
+						)}
+					</Button>
+
+					{/* Centered timestamp */}
+					<div className="absolute left-0 right-0 mx-auto w-fit text-center">
+						<span className="text-xs text-muted-foreground">
+							{isReady ? `${formatTime(currentTime)} / ${formatTime(duration)}` : '--:--'}
+						</span>
+					</div>
+
+					{/* Right-aligned volume controls */}
+					<div className="ml-auto flex items-center gap-1.5">
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={toggleMute}
+							className={cn(
+								'h-5 w-5 p-0 rounded-full',
+								isMuted ? 'text-muted-foreground/60' : 'text-muted-foreground',
+								!isReady && 'opacity-50'
+							)}
+							disabled={!isReady}
+						>
+							{isMuted ? <VolumeX className="h-2.5 w-2.5" /> : <Volume2 className="h-2.5 w-2.5" />}
+						</Button>
+
+						<Slider
+							value={[isMuted ? 0 : volume * 100]}
+							max={100}
+							step={1}
+							className={cn('cursor-pointer h-1 w-12 sm:w-16 stem-colored-slider', !isReady && 'opacity-50')}
+							onValueChange={handleVolumeChange}
+							disabled={!isReady}
+							style={
+								{
+									// Dark background with a subtle hint of the stem color
+									'--slider-track': `rgba(${progressColor.match(/\d+/g)?.[0]},${progressColor.match(/\d+/g)?.[1]},${
+										progressColor.match(/\d+/g)?.[2]
+									},0.08)`,
+									'--slider-range': progressColor,
+									'--slider-thumb': progressColor,
+								} as React.CSSProperties
+							}
+						/>
+					</div>
 				</div>
-			</div>
-		</Card>
+			</Card>
+
+			{/* MIDI Dialog */}
+			{extractedMidi && (
+				<MidiDialog
+					open={midiDialogOpen}
+					onOpenChange={setMidiDialogOpen}
+					midiObject={extractedMidi}
+					stemName={stemName}
+					downloadUrl={midiDownloadUrl}
+					filename={midiFilename}
+				/>
+			)}
+		</>
 	)
 }

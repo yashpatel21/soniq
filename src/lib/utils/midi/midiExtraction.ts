@@ -46,7 +46,10 @@ export async function initializeBasicPitch(): Promise<BasicPitch> {
 /**
  * Extracts MIDI data from an audio buffer using BasicPitch
  */
-export async function extractMidiFromAudioBuffer(audioBuffer: AudioBuffer, stemName: string): Promise<Uint8Array> {
+export async function extractMidiFromAudioBuffer(
+	audioBuffer: AudioBuffer,
+	stemName: string
+): Promise<{ midiData: Uint8Array; midiObject: Midi }> {
 	// Initialize BasicPitch
 	const basicPitch = await initializeBasicPitch()
 
@@ -97,7 +100,10 @@ export async function extractMidiFromAudioBuffer(audioBuffer: AudioBuffer, stemN
 	})
 
 	// Convert to binary MIDI data
-	return new Uint8Array(midi.toArray())
+	return {
+		midiData: new Uint8Array(midi.toArray()),
+		midiObject: midi,
+	}
 }
 
 /**
@@ -106,14 +112,14 @@ export async function extractMidiFromAudioBuffer(audioBuffer: AudioBuffer, stemN
 export async function createDownloadableMidiFromAudioBuffer(
 	audioBuffer: AudioBuffer,
 	stemName: string
-): Promise<{ url: string; filename: string }> {
+): Promise<{ url: string; filename: string; midiObject: Midi }> {
 	// Extract MIDI data
-	const midiData = await extractMidiFromAudioBuffer(audioBuffer, stemName)
+	const { midiData, midiObject } = await extractMidiFromAudioBuffer(audioBuffer, stemName)
 
 	// Create blob and downloadable URL
 	const blob = new Blob([midiData], { type: 'audio/midi' })
 	const url = URL.createObjectURL(blob)
 	const filename = `${stemName}.mid`
 
-	return { url, filename }
+	return { url, filename, midiObject }
 }
