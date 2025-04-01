@@ -1163,7 +1163,7 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '', st
 							className="absolute right-0 top-0 bottom-0"
 							style={{
 								width: SCROLLBAR_WIDTH,
-								backgroundColor: 'hsl(222.2 84% 5.9%)', // Very dark blue, slightly lighter than background
+								backgroundColor: 'rgb(24, 29, 44)', // Exact RGB color to match horizontal scrollbar
 								border: 'none',
 							}}
 						>
@@ -1216,44 +1216,47 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '', st
 
 			{/* Horizontal scrollbar */}
 			<div className="w-full flex-shrink-0" style={{ height: SCROLLBAR_HEIGHT }}>
-				<div
-					ref={customHorizontalScrollbarRef}
-					className="relative h-full"
-					style={{
-						backgroundColor: 'hsl(222.2 84% 5.9%)', // Very dark blue, slightly lighter than background
-						border: 'none',
-						width: midiMetadata.needsVerticalScroll ? `calc(100% - ${SCROLLBAR_WIDTH}px)` : '100%',
-					}}
-				>
+				<div className="flex flex-row h-full">
 					<div
-						ref={scrollHorizontalThumbRef}
-						className="absolute cursor-pointer"
+						ref={customHorizontalScrollbarRef}
+						className="relative h-full"
 						style={{
-							height: '60%',
-							top: '20%', // Center it vertically (20% on each side)
-							width:
-								midiMetadata.maxScrollLeft > 0
-									? `${Math.max(40, (containerWidth / midiMetadata.rollWidth) * 100)}%`
-									: '100%',
-							backgroundColor: 'hsl(217 15% 65%)', // Muted blue-gray color
-							borderRadius: '3px',
-							left: 0,
-							transition: isDraggingHorizontalThumb || playing ? 'none' : 'left 0.1s',
+							backgroundColor: 'rgba(var(--accent), 0.4)', // Match the dialog's bg-accent styling with slightly higher opacity
+							border: 'none',
+							width: midiMetadata.needsVerticalScroll ? `calc(100% - ${SCROLLBAR_WIDTH}px)` : '100%',
 						}}
-					/>
-				</div>
+					>
+						<div
+							ref={scrollHorizontalThumbRef}
+							className="absolute cursor-pointer"
+							style={{
+								height: '60%',
+								top: '20%', // Center it vertically (20% on each side)
+								width:
+									midiMetadata.maxScrollLeft > 0
+										? `${Math.max(40, (containerWidth / midiMetadata.rollWidth) * 100)}%`
+										: '100%',
+								backgroundColor: 'hsl(217 15% 65%)', // Muted blue-gray color
+								borderRadius: '3px',
+								left: 0,
+								transition: isDraggingHorizontalThumb || playing ? 'none' : 'left 0.1s',
+							}}
+						/>
+					</div>
 
-				{/* Add the corner square for when both scrollbars are visible */}
-				{midiMetadata.needsVerticalScroll && (
-					<div
-						className="absolute bottom-0 right-0"
-						style={{
-							width: SCROLLBAR_WIDTH,
-							height: SCROLLBAR_HEIGHT,
-							backgroundColor: 'hsl(222.2 84% 5.9%)', // Match scrollbar track color
-						}}
-					/>
-				)}
+					{/* Scrollbar corner */}
+					{midiMetadata.needsVerticalScroll && (
+						<div
+							className="flex-shrink-0"
+							style={{
+								width: SCROLLBAR_WIDTH,
+								height: SCROLLBAR_HEIGHT,
+								backgroundColor: 'rgb(20, 24, 37)', // Darker than the scrollbar but not as black as before
+								border: 'none',
+							}}
+						/>
+					)}
+				</div>
 			</div>
 		</div>
 	)
