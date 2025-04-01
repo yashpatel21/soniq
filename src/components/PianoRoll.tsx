@@ -537,28 +537,60 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '', st
 			// Check if this is a horizontal touchpad gesture (significant deltaX)
 			const isHorizontalGesture = Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 0
 
-			// Skip during playback for horizontal scrolling (unless shift modifier)
-			if (playing && !e.shiftKey && !isHorizontalGesture) return
+			// Check if this is a vertical touchpad gesture (significant deltaY)
+			const isVerticalGesture = Math.abs(e.deltaY) > Math.abs(e.deltaX) && Math.abs(e.deltaY) > 0
 
-			// Handle horizontal scrolling when:
-			// 1. It's explicitly a horizontal gesture (touchpad swipe left/right), OR
-			// 2. Shift is pressed, OR
-			// 3. There's no vertical scrolling needed
-			if (isHorizontalGesture || e.shiftKey || !midiMetadata.needsVerticalScroll) {
-				// Use deltaX for horizontal gestures, otherwise fall back to deltaY
-				const delta = isHorizontalGesture ? e.deltaX : e.deltaY || e.deltaX
-				const newPosition = Math.max(0, Math.min(horizontalScrollPosition + delta, midiMetadata.maxScrollLeft))
+			// CASE 1: Horizontal gesture (touchpad swipe left/right)
+			if (isHorizontalGesture) {
+				// Block ALL horizontal touchpad gestures during playback
+				if (playing) return
+
+				// Otherwise allow horizontal scrolling
+				const newPosition = Math.max(0, Math.min(horizontalScrollPosition + e.deltaX, midiMetadata.maxScrollLeft))
 				updateHorizontalScrollPosition(newPosition)
-			} else {
-				// Vertical scrolling - Increased speed
-				// Calculate a faster scroll increment based on deltaY
-				const baseIncrement = 0.15 // Increased from 0.05 (3x faster)
-				// Scale by wheel delta magnitude, capped at a reasonable value
+				return
+			}
+
+			// CASE 2: Vertical gesture (touchpad swipe up/down)
+			if (isVerticalGesture && midiMetadata.needsVerticalScroll) {
+				// Allow vertical scrolling even during playback
+				const baseIncrement = 0.15
 				const deltaScale = Math.min(Math.abs(e.deltaY) / 100, 3)
 				const scrollIncrement = baseIncrement * Math.sign(e.deltaY) * deltaScale
 
 				const newPosition = Math.max(0, Math.min(verticalScrollPosition + scrollIncrement, 1))
 				updateVerticalScrollPosition(newPosition)
+				return
+			}
+
+			// CASE 3: Shift key for horizontal scrolling with mousewheel
+			if (e.shiftKey) {
+				// Block shift+wheel horizontal scrolling during playback
+				if (playing) return
+
+				const delta = e.deltaY
+				const newPosition = Math.max(0, Math.min(horizontalScrollPosition + delta, midiMetadata.maxScrollLeft))
+				updateHorizontalScrollPosition(newPosition)
+				return
+			}
+
+			// CASE 4: Default mouse wheel (vertical scrolling)
+			if (midiMetadata.needsVerticalScroll) {
+				// Always allow vertical mouse wheel scrolling
+				const baseIncrement = 0.15
+				const deltaScale = Math.min(Math.abs(e.deltaY) / 100, 3)
+				const scrollIncrement = baseIncrement * Math.sign(e.deltaY) * deltaScale
+
+				const newPosition = Math.max(0, Math.min(verticalScrollPosition + scrollIncrement, 1))
+				updateVerticalScrollPosition(newPosition)
+				return
+			} else {
+				// When no vertical scrolling needed, wheel scrolls horizontally
+				if (playing) return // But block during playback
+
+				const delta = e.deltaY
+				const newPosition = Math.max(0, Math.min(horizontalScrollPosition + delta, midiMetadata.maxScrollLeft))
+				updateHorizontalScrollPosition(newPosition)
 			}
 		},
 		[
