@@ -306,7 +306,7 @@ export function MidiDialog({ open, onOpenChange, midiObject, stemName, downloadU
 							</div>
 						) : (
 							<>
-								<div className="flex-1 min-h-0 overflow-hidden bg-black/10 dark:bg-white/5">
+								<div className="flex-1 min-h-0 overflow-hidden bg-black/10 dark:bg-white/5 rounded-lg">
 									<PianoRoll
 										midiObject={midiObject}
 										currentTime={currentTime}
@@ -315,7 +315,7 @@ export function MidiDialog({ open, onOpenChange, midiObject, stemName, downloadU
 									/>
 								</div>
 
-								<div className="p-2 flex items-center gap-2 border-t">
+								<div className="p-2 flex items-center gap-2">
 									<Button variant="outline" size="icon" onClick={togglePlayback} className="h-8 w-8">
 										{isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
 									</Button>
