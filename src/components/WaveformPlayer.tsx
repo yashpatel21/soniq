@@ -49,9 +49,7 @@ export function WaveformPlayer({
 
 	// MIDI Dialog state
 	const [midiDialogOpen, setMidiDialogOpen] = useState(false)
-	const [extractedMidi, setExtractedMidi] = useState<Midi | null>(null)
-	const [midiDownloadUrl, setMidiDownloadUrl] = useState<string>('')
-	const [midiFilename, setMidiFilename] = useState<string>('')
+	const [processedAudioBuffer, setProcessedAudioBuffer] = useState<AudioBuffer | null>(null)
 
 	// Refs
 	const containerRef = useRef<HTMLDivElement>(null)
@@ -367,27 +365,19 @@ export function WaveformPlayer({
 
 		try {
 			setIsExtractingMidi(true)
-			toast.info(`Extracting MIDI from ${stemName}...`)
+			toast.info(`Preparing audio for MIDI extraction...`)
 
 			// Convert audio to mono and resample to 22050Hz
-			const processedAudioBuffer = await convertToMonoAndResample(wavesurferRef.current)
+			const processedBuffer = await convertToMonoAndResample(wavesurferRef.current)
 
-			// Use our client-side MIDI extraction utility with the processed buffer
-			const { url, filename, midiObject } = await createDownloadableMidiFromAudioBuffer(processedAudioBuffer, stemName)
-
-			// Store the extracted MIDI data
-			setExtractedMidi(midiObject)
-			setMidiDownloadUrl(url)
-			setMidiFilename(filename)
+			// Store the processed audio buffer
+			setProcessedAudioBuffer(processedBuffer)
 
 			// Open the MIDI dialog
 			setMidiDialogOpen(true)
-
-			// Show success message
-			toast.success(`MIDI extraction complete for ${stemName}`)
 		} catch (e) {
-			console.error('Error extracting MIDI:', e)
-			toast.error(e instanceof Error ? e.message : 'Failed to extract MIDI')
+			console.error('Error processing audio for MIDI extraction:', e)
+			toast.error(e instanceof Error ? e.message : 'Failed to process audio')
 		} finally {
 			setIsExtractingMidi(false)
 		}
@@ -618,14 +608,12 @@ export function WaveformPlayer({
 			</Card>
 
 			{/* MIDI Dialog */}
-			{extractedMidi && (
+			{processedAudioBuffer && (
 				<MidiDialog
 					open={midiDialogOpen}
 					onOpenChange={setMidiDialogOpen}
-					midiObject={extractedMidi}
+					audioBuffer={processedAudioBuffer}
 					stemName={stemName}
-					downloadUrl={midiDownloadUrl}
-					filename={midiFilename}
 					stemColor={progressColor}
 				/>
 			)}

@@ -48,7 +48,10 @@ export async function initializeBasicPitch(): Promise<BasicPitch> {
  */
 export async function extractMidiFromAudioBuffer(
 	audioBuffer: AudioBuffer,
-	stemName: string
+	stemName: string,
+	onsetThreshold: number = 0.5,
+	frameThreshold: number = 0.3,
+	minNoteLength: number = 11
 ): Promise<{ midiData: Uint8Array; midiObject: Midi }> {
 	// Initialize BasicPitch
 	const basicPitch = await initializeBasicPitch()
@@ -69,10 +72,14 @@ export async function extractMidiFromAudioBuffer(
 		() => {} // Empty callback for progress
 	)
 
-	// Convert the output to note events
-	const notes = noteFramesToTime(addPitchBendsToNoteEvents(contours, outputToNotesPoly(frames, onsets, 0.5, 0.3, 11)))
+	// Convert the output to note events using the provided parameters
+	const notes = noteFramesToTime(
+		addPitchBendsToNoteEvents(contours, outputToNotesPoly(frames, onsets, onsetThreshold, frameThreshold, minNoteLength))
+	)
 
-	console.log(`MIDI extraction complete, extracted ${notes.length} notes`)
+	console.log(
+		`MIDI extraction complete, extracted ${notes.length} notes with parameters: onsetThreshold=${onsetThreshold}, frameThreshold=${frameThreshold}, minNoteLength=${minNoteLength}`
+	)
 
 	// Create MIDI file using Tone.js/MIDI
 	const midi = new Midi()
@@ -111,10 +118,13 @@ export async function extractMidiFromAudioBuffer(
  */
 export async function createDownloadableMidiFromAudioBuffer(
 	audioBuffer: AudioBuffer,
-	stemName: string
+	stemName: string,
+	onsetThreshold: number = 0.5,
+	frameThreshold: number = 0.3,
+	minNoteLength: number = 11
 ): Promise<{ url: string; filename: string; midiObject: Midi }> {
-	// Extract MIDI data
-	const { midiData, midiObject } = await extractMidiFromAudioBuffer(audioBuffer, stemName)
+	// Extract MIDI data with the provided parameters
+	const { midiData, midiObject } = await extractMidiFromAudioBuffer(audioBuffer, stemName, onsetThreshold, frameThreshold, minNoteLength)
 
 	// Create blob and downloadable URL
 	const blob = new Blob([midiData], { type: 'audio/midi' })
