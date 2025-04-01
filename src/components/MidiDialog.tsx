@@ -7,9 +7,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { PianoRoll } from '@/components/PianoRoll'
-import { Download, FileMusic, Pause, Play, RefreshCw as RotateCcw, Volume, Volume1, Volume2, VolumeX } from 'lucide-react'
+import { Download, FileMusic, Pause, Play, SkipBack, Volume, Volume1, Volume2, VolumeX } from 'lucide-react'
 import { formatTime } from '@/lib/utils/ui/utils'
 import { toast } from 'sonner'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface MidiDialogProps {
 	open: boolean
@@ -18,9 +19,10 @@ interface MidiDialogProps {
 	stemName: string
 	downloadUrl: string
 	filename: string
+	stemColor?: string
 }
 
-export function MidiDialog({ open, onOpenChange, midiObject, stemName, downloadUrl, filename }: MidiDialogProps) {
+export function MidiDialog({ open, onOpenChange, midiObject, stemName, downloadUrl, filename, stemColor = '#3B82F6' }: MidiDialogProps) {
 	// State for MIDI playback
 	const [isPlaying, setIsPlaying] = useState(false)
 	const [currentTime, setCurrentTime] = useState(0)
@@ -284,12 +286,21 @@ export function MidiDialog({ open, onOpenChange, midiObject, stemName, downloadU
 		toast.success(`Downloaded ${stemName} MIDI file`)
 	}
 
+	// Get volume icon based on volume level and mute state
+	const getVolumeIcon = () => {
+		if (isMuted) return <VolumeX className="h-4 w-4" />
+		if (volume < 0.01) return <VolumeX className="h-4 w-4" />
+		if (volume < 0.4) return <Volume className="h-4 w-4" />
+		if (volume < 0.7) return <Volume1 className="h-4 w-4" />
+		return <Volume2 className="h-4 w-4" />
+	}
+
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="sm:max-w-2xl md:max-w-3xl w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
 				<DialogHeader className="p-2">
 					<DialogTitle className="flex items-center gap-2">
-						<FileMusic className="h-5 w-5" />
+						<FileMusic className="h-5 w-5" style={{ color: stemColor }} />
 						<span>{stemName} MIDI</span>
 					</DialogTitle>
 					<DialogDescription>Preview and export extracted MIDI notes</DialogDescription>
@@ -312,40 +323,94 @@ export function MidiDialog({ open, onOpenChange, midiObject, stemName, downloadU
 										currentTime={currentTime}
 										playing={isPlaying}
 										className="w-full h-full"
+										stemColor={stemColor}
 									/>
 								</div>
 
-								<div className="p-2 flex items-center gap-2">
-									<Button variant="outline" size="icon" onClick={togglePlayback} className="h-8 w-8">
-										{isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-									</Button>
+								<div className="p-4 mt-2 flex flex-wrap items-center gap-4">
+									<div className="flex items-center gap-2">
+										<Button
+											variant="outline"
+											size="icon"
+											onClick={resetPlayback}
+											className="rounded-full h-10 w-10 flex items-center justify-center text-muted-foreground"
+										>
+											<SkipBack className="h-5 w-5" />
+										</Button>
 
-									<Button variant="outline" size="icon" onClick={resetPlayback} className="h-8 w-8">
-										<RotateCcw className="h-4 w-4" />
-									</Button>
+										<Button
+											variant="outline"
+											size="icon"
+											onClick={togglePlayback}
+											className="rounded-full h-10 w-10 flex items-center justify-center"
+											style={{
+												borderColor: `${stemColor}40`,
+												...(isPlaying
+													? { backgroundColor: stemColor, color: 'white' }
+													: {
+															backgroundColor: `${
+																stemColor.startsWith('#')
+																	? `rgba(${parseInt(stemColor.slice(1, 3), 16)}, ${parseInt(
+																			stemColor.slice(3, 5),
+																			16
+																	  )}, ${parseInt(stemColor.slice(5, 7), 16)}, 0.25)`
+																	: stemColor.replace('rgb(', 'rgba(').replace(')', ', 0.75)')
+															}`,
+															color: 'white',
+													  }),
+											}}
+										>
+											{isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+										</Button>
+									</div>
 
-									<div className="text-xs text-muted-foreground mx-2">
+									<div className="text-sm text-muted-foreground">
 										{formatTime(currentTime)} / {formatTime(duration)}
 									</div>
 
-									<div className="flex items-center gap-2 ml-auto">
-										<Button variant="ghost" size="icon" onClick={toggleMute} className="h-8 w-8">
-											{isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+									<div className="flex items-center gap-3 ml-auto">
+										<Button
+											variant="ghost"
+											size="icon"
+											onClick={toggleMute}
+											className="rounded-full h-8 w-8 flex items-center justify-center"
+											style={{ color: stemColor }}
+										>
+											{getVolumeIcon()}
 										</Button>
 
 										<Slider
 											value={[isMuted ? 0 : volume * 100]}
 											max={100}
 											step={1}
-											className="w-20"
+											className="w-24 stem-colored-slider"
 											onValueChange={handleVolumeChange}
+											style={
+												{
+													'--slider-range': stemColor,
+													'--slider-thumb': stemColor,
+												} as React.CSSProperties
+											}
 										/>
-
-										<Button variant="default" size="sm" onClick={handleDownload}>
-											<Download className="h-4 w-4 mr-2" />
-											Download MIDI
-										</Button>
 									</div>
+
+									<TooltipProvider>
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<Button
+													variant="outline"
+													size="icon"
+													onClick={handleDownload}
+													className="rounded-full h-10 w-10 flex items-center justify-center text-muted-foreground"
+												>
+													<Download className="h-5 w-5" />
+												</Button>
+											</TooltipTrigger>
+											<TooltipContent>
+												<p>Download MIDI</p>
+											</TooltipContent>
+										</Tooltip>
+									</TooltipProvider>
 								</div>
 							</>
 						)}

@@ -626,6 +626,7 @@ export function WaveformPlayer({
 					stemName={stemName}
 					downloadUrl={midiDownloadUrl}
 					filename={midiFilename}
+					stemColor={progressColor}
 				/>
 			)}
 		</>

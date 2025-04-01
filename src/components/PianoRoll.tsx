@@ -14,7 +14,8 @@ const MAX_PITCH = 108 // C8
 const PIXELS_PER_SECOND = 100
 const VERTICAL_PADDING_NOTES = 4
 const SCROLLBAR_HEIGHT = 12
-const MIN_NOTE_RANGE = 37 // Minimum range of notes to display
+const SCROLLBAR_WIDTH = 12
+const VISIBLE_NOTE_RANGE = 37 // Exactly 37 notes are visible at any time
 
 // Helper functions
 const isWhiteKey = (pitch: number): boolean => {
@@ -35,18 +36,50 @@ const formatTime = (seconds: number): string => {
 	return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+// Add a helper function to add opacity to any color format
+const addOpacity = (color: string, opacity: number): string => {
+	// Check if it's an RGB or RGBA color
+	if (color.startsWith('rgb')) {
+		// Extract RGB components
+		const rgbMatch = color.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/)
+		if (rgbMatch) {
+			return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${opacity})`
+		}
+
+		// It's already an RGBA color
+		const rgbaMatch = color.match(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9.]+)\s*\)/)
+		if (rgbaMatch) {
+			return `rgba(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]}, ${opacity})`
+		}
+	}
+
+	// Handle hex colors
+	if (color.startsWith('#')) {
+		// Convert hex to rgb and add opacity
+		const r = parseInt(color.slice(1, 3), 16)
+		const g = parseInt(color.slice(3, 5), 16)
+		const b = parseInt(color.slice(5, 7), 16)
+		return `rgba(${r}, ${g}, ${b}, ${opacity})`
+	}
+
+	// For any other color format, default to a gray with the requested opacity
+	return `rgba(128, 128, 128, ${opacity})`
+}
+
 interface PianoRollProps {
 	midiObject: Midi
 	currentTime: number
 	playing: boolean
 	className?: string
+	stemColor?: string
 }
 
-export function PianoRoll({ midiObject, currentTime, playing, className = '' }: PianoRollProps) {
+export function PianoRoll({ midiObject, currentTime, playing, className = '', stemColor = '#3B82F6' }: PianoRollProps) {
 	// DOM Container refs
 	const containerRef = useRef<HTMLDivElement>(null)
 	const rollAreaRef = useRef<HTMLDivElement>(null)
-	const scrollbarRef = useRef<HTMLDivElement>(null)
+	const horizontalScrollbarRef = useRef<HTMLDivElement>(null)
+	const verticalScrollbarRef = useRef<HTMLDivElement>(null)
 
 	// Konva refs
 	const stageRef = useRef<Konva.Stage>(null)
@@ -54,7 +87,8 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 
 	// Basic UI state
 	const [containerWidth, setContainerWidth] = useState<number>(800)
-	const [scrollPosition, setScrollPosition] = useState<number>(0)
+	const [horizontalScrollPosition, setHorizontalScrollPosition] = useState<number>(0)
+	const [verticalScrollPosition, setVerticalScrollPosition] = useState<number>(0)
 
 	// Scroll syncing flags
 	const isScrollingSyncRef = useRef<boolean>(false)
@@ -65,10 +99,29 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 		rollWidth: 1000,
 		minPitch: 48, // C3 default
 		maxPitch: 84, // C6 default
-		pianoRollHeight: MIN_NOTE_RANGE * NOTE_HEIGHT,
+		visibleMinPitch: 48, // Visible min pitch (for scrolling)
+		visibleMaxPitch: 84, // Visible max pitch (for scrolling)
+		totalPianoRollHeight: VISIBLE_NOTE_RANGE * NOTE_HEIGHT,
+		visiblePianoRollHeight: VISIBLE_NOTE_RANGE * NOTE_HEIGHT,
 		maxScrollLeft: 0,
+		maxScrollTop: 0,
+		needsVerticalScroll: false,
 		initialized: false,
 	})
+
+	// Add these new references and state for custom scrollbar
+	const customScrollbarRef = useRef<HTMLDivElement>(null)
+	const scrollThumbRef = useRef<HTMLDivElement>(null)
+	const [isDraggingThumb, setIsDraggingThumb] = useState(false)
+	const dragStartY = useRef<number>(0)
+	const dragStartScrollPosition = useRef<number>(0)
+
+	// New refs and state for custom horizontal scrollbar
+	const customHorizontalScrollbarRef = useRef<HTMLDivElement>(null)
+	const scrollHorizontalThumbRef = useRef<HTMLDivElement>(null)
+	const [isDraggingHorizontalThumb, setIsDraggingHorizontalThumb] = useState(false)
+	const dragStartX = useRef<number>(0)
+	const dragStartHorizontalScrollPosition = useRef<number>(0)
 
 	// Process MIDI data on mount/change
 	useEffect(() => {
@@ -104,8 +157,8 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 	// Reset scroll position when currentTime is 0
 	useEffect(() => {
 		if (currentTime === 0) {
-			console.log('Resetting scroll position to beginning')
-			updateScrollPosition(0)
+			console.log('Resetting horizontal scroll position to beginning')
+			updateHorizontalScrollPosition(0)
 		}
 	}, [currentTime])
 
@@ -116,16 +169,21 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 
 			// Set default range centered around middle C
 			const defaultMinPitch = 48 // C3
-			const defaultMaxPitch = defaultMinPitch + MIN_NOTE_RANGE - 1
-			const pianoRollHeight = MIN_NOTE_RANGE * NOTE_HEIGHT
+			const defaultMaxPitch = defaultMinPitch + VISIBLE_NOTE_RANGE - 1
+			const pianoRollHeight = VISIBLE_NOTE_RANGE * NOTE_HEIGHT
 
 			setMidiMetadata({
 				duration: 10,
 				rollWidth: 1000,
 				minPitch: defaultMinPitch,
 				maxPitch: defaultMaxPitch,
-				pianoRollHeight,
+				visibleMinPitch: defaultMinPitch,
+				visibleMaxPitch: defaultMaxPitch,
+				totalPianoRollHeight: pianoRollHeight,
+				visiblePianoRollHeight: pianoRollHeight,
 				maxScrollLeft: Math.max(0, 1000 - containerWidth),
+				maxScrollTop: 0,
+				needsVerticalScroll: false,
 				initialized: true,
 			})
 
@@ -179,83 +237,135 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 		let minPitch = Math.max(MIN_PITCH, lowestPitch - VERTICAL_PADDING_NOTES)
 		let maxPitch = Math.min(MAX_PITCH, highestPitch + VERTICAL_PADDING_NOTES)
 
-		// Ensure minimum note range
-		let noteRange = maxPitch - minPitch + 1
+		// Calculate the actual note range
+		const actualNoteRange = maxPitch - minPitch + 1
 
-		if (noteRange < MIN_NOTE_RANGE) {
-			// Calculate additional padding needed
-			const additionalPadding = MIN_NOTE_RANGE - noteRange
+		// Set up vertical scrolling if needed
+		let needsVerticalScroll = actualNoteRange > VISIBLE_NOTE_RANGE
+		let visibleMinPitch = minPitch
+		let visibleMaxPitch = maxPitch
+		let maxScrollTop = 0
 
-			// Split padding evenly
-			const paddingBelow = Math.floor(additionalPadding / 2)
-			const paddingAbove = additionalPadding - paddingBelow
+		if (needsVerticalScroll) {
+			// For vertical scrolling we need to calculate both the total range and initial visible range
 
-			// Apply padding evenly (or as much as possible)
-			minPitch = Math.max(MIN_PITCH, minPitch - paddingBelow)
-			maxPitch = Math.min(MAX_PITCH, maxPitch + paddingAbove)
+			// The visible height is always fixed at VISIBLE_NOTE_RANGE
+			const visiblePianoRollHeight = VISIBLE_NOTE_RANGE * NOTE_HEIGHT
 
-			// If we hit one boundary, add remaining padding to other side
-			if (minPitch === MIN_PITCH && maxPitch - minPitch + 1 < MIN_NOTE_RANGE) {
-				maxPitch = Math.min(MAX_PITCH, minPitch + MIN_NOTE_RANGE - 1)
-			} else if (maxPitch === MAX_PITCH && maxPitch - minPitch + 1 < MIN_NOTE_RANGE) {
-				minPitch = Math.max(MIN_PITCH, maxPitch - MIN_NOTE_RANGE + 1)
+			// For scrolling, we want to represent the actual range of notes that need to be visible
+			// Initially set the visible range to show the highest notes (consistent with piano layout)
+			visibleMinPitch = maxPitch - VISIBLE_NOTE_RANGE + 1
+			visibleMaxPitch = maxPitch
+
+			// Set maxScrollTop to match the number of scrollable notes
+			// This is the number of notes beyond the visible range
+			maxScrollTop = actualNoteRange - VISIBLE_NOTE_RANGE
+
+			console.log(
+				`Setting up vertical scroll: total range ${minPitch}-${maxPitch} (${actualNoteRange} notes), initial visible range ${visibleMinPitch}-${visibleMaxPitch}`
+			)
+
+			setMidiMetadata({
+				duration,
+				rollWidth: Math.max(duration * PIXELS_PER_SECOND, 1000),
+				minPitch,
+				maxPitch,
+				visibleMinPitch,
+				visibleMaxPitch,
+				totalPianoRollHeight: actualNoteRange * NOTE_HEIGHT,
+				visiblePianoRollHeight,
+				maxScrollLeft: Math.max(0, Math.max(duration * PIXELS_PER_SECOND, 1000) - containerWidth),
+				maxScrollTop,
+				needsVerticalScroll,
+				initialized: true,
+			})
+
+			// Reset vertical scroll position
+			setVerticalScrollPosition(0)
+		} else {
+			// If the actual range is less than VISIBLE_NOTE_RANGE, pad it to VISIBLE_NOTE_RANGE
+			if (actualNoteRange < VISIBLE_NOTE_RANGE) {
+				// Calculate additional padding needed
+				const additionalPadding = VISIBLE_NOTE_RANGE - actualNoteRange
+
+				// Split padding evenly
+				const paddingBelow = Math.floor(additionalPadding / 2)
+				const paddingAbove = additionalPadding - paddingBelow
+
+				// Apply padding evenly (or as much as possible)
+				minPitch = Math.max(MIN_PITCH, minPitch - paddingBelow)
+				maxPitch = Math.min(MAX_PITCH, maxPitch + paddingAbove)
+
+				// If we hit one boundary, add remaining padding to other side
+				if (minPitch === MIN_PITCH && maxPitch - minPitch + 1 < VISIBLE_NOTE_RANGE) {
+					maxPitch = Math.min(MAX_PITCH, minPitch + VISIBLE_NOTE_RANGE - 1)
+				} else if (maxPitch === MAX_PITCH && maxPitch - minPitch + 1 < VISIBLE_NOTE_RANGE) {
+					minPitch = Math.max(MIN_PITCH, maxPitch - VISIBLE_NOTE_RANGE + 1)
+				}
 			}
-		}
 
-		// Final check to ensure minimum range
-		noteRange = maxPitch - minPitch + 1
-		if (noteRange < MIN_NOTE_RANGE) {
-			console.warn(`Note range (${noteRange}) still below minimum (${MIN_NOTE_RANGE}), forcing adjustment`)
-			if (minPitch === MIN_PITCH) {
-				maxPitch = minPitch + MIN_NOTE_RANGE - 1
-			} else {
-				minPitch = maxPitch - MIN_NOTE_RANGE + 1
+			// Ensure exact VISIBLE_NOTE_RANGE even after padding
+			const paddedNoteRange = maxPitch - minPitch + 1
+			if (paddedNoteRange > VISIBLE_NOTE_RANGE) {
+				// If we somehow got more than VISIBLE_NOTE_RANGE, trim it down
+				maxPitch = minPitch + VISIBLE_NOTE_RANGE - 1
+			} else if (paddedNoteRange < VISIBLE_NOTE_RANGE) {
+				// If we still have less than VISIBLE_NOTE_RANGE, extend the max
+				maxPitch = Math.min(MAX_PITCH, minPitch + VISIBLE_NOTE_RANGE - 1)
+				// If we hit MAX_PITCH, adjust minPitch
+				if (maxPitch - minPitch + 1 < VISIBLE_NOTE_RANGE) {
+					minPitch = Math.max(MIN_PITCH, maxPitch - VISIBLE_NOTE_RANGE + 1)
+				}
 			}
+
+			// Since no vertical scrolling, visible range equals full range
+			visibleMinPitch = minPitch
+			visibleMaxPitch = maxPitch
+
+			const pianoRollHeight = VISIBLE_NOTE_RANGE * NOTE_HEIGHT
+
+			console.log(
+				`Fixed display range: ${minPitch} (${pitchToNoteName(minPitch)}) to ${maxPitch} (${pitchToNoteName(maxPitch)}) - ${
+					maxPitch - minPitch + 1
+				} notes`
+			)
+
+			setMidiMetadata({
+				duration,
+				rollWidth: Math.max(duration * PIXELS_PER_SECOND, 1000),
+				minPitch,
+				maxPitch,
+				visibleMinPitch,
+				visibleMaxPitch,
+				totalPianoRollHeight: pianoRollHeight,
+				visiblePianoRollHeight: pianoRollHeight,
+				maxScrollLeft: Math.max(0, Math.max(duration * PIXELS_PER_SECOND, 1000) - containerWidth),
+				maxScrollTop: 0,
+				needsVerticalScroll: false,
+				initialized: true,
+			})
 		}
-
-		// Calculate dimensions
-		const pianoRollHeight = noteRange * NOTE_HEIGHT
-		const rollWidth = Math.max(duration * PIXELS_PER_SECOND, 1000)
-		const maxScrollLeft = Math.max(0, rollWidth - containerWidth)
-
-		console.log(
-			`Final display range: ${minPitch} (${pitchToNoteName(minPitch)}) to ${maxPitch} (${pitchToNoteName(
-				maxPitch
-			)}) - ${noteRange} notes`
-		)
-		console.log(`Piano roll dimensions: ${rollWidth}x${pianoRollHeight}px`)
-
-		// Update state with calculated metadata
-		setMidiMetadata({
-			duration,
-			rollWidth,
-			minPitch,
-			maxPitch,
-			pianoRollHeight,
-			maxScrollLeft,
-			initialized: true,
-		})
 	}
 
-	// Update max scroll when container width changes
+	// Update max horizontal scroll when container width changes
 	useEffect(() => {
 		const maxScrollLeft = Math.max(0, midiMetadata.rollWidth - containerWidth)
 		setMidiMetadata((prev) => ({ ...prev, maxScrollLeft }))
 
 		// Adjust current scroll if needed
-		if (scrollPosition > maxScrollLeft) {
-			updateScrollPosition(maxScrollLeft)
+		if (horizontalScrollPosition > maxScrollLeft) {
+			updateHorizontalScrollPosition(maxScrollLeft)
 		}
-	}, [containerWidth, midiMetadata.rollWidth, scrollPosition])
+	}, [containerWidth, midiMetadata.rollWidth, horizontalScrollPosition])
 
-	// Apply scroll position to both scrollbar and content group
-	const updateScrollPosition = useCallback(
+	// Apply horizontal scroll position
+	const updateHorizontalScrollPosition = useCallback(
 		(newPosition: number) => {
 			// Ensure position is within bounds
 			const boundedPosition = Math.max(0, Math.min(newPosition, midiMetadata.maxScrollLeft))
 
 			// Only update if position has changed
-			if (boundedPosition === scrollPosition) return
+			if (boundedPosition === horizontalScrollPosition) return
 
 			// Set flag to prevent feedback loops
 			isScrollingSyncRef.current = true
@@ -269,20 +379,81 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 				}
 			}
 
-			// Update scrollbar directly
-			if (scrollbarRef.current) {
-				scrollbarRef.current.scrollLeft = boundedPosition
+			// Update scrollbar thumb position if we're using custom scrollbar
+			if (scrollHorizontalThumbRef.current && customHorizontalScrollbarRef.current) {
+				const scrollbarWidth = customHorizontalScrollbarRef.current.clientWidth
+				const thumbWidth = scrollHorizontalThumbRef.current.clientWidth
+				const availableTravel = scrollbarWidth - thumbWidth
+
+				if (availableTravel > 0) {
+					// Convert absolute position to normalized position (0-1)
+					const normalizedPosition = boundedPosition / midiMetadata.maxScrollLeft
+					scrollHorizontalThumbRef.current.style.left = `${normalizedPosition * availableTravel}px`
+				}
 			}
 
 			// Finally update React state (will trigger rerender, but visuals already updated)
-			setScrollPosition(boundedPosition)
+			setHorizontalScrollPosition(boundedPosition)
 
 			// Reset flag after a short delay
 			setTimeout(() => {
 				isScrollingSyncRef.current = false
 			}, 50)
 		},
-		[midiMetadata.maxScrollLeft, scrollPosition]
+		[midiMetadata.maxScrollLeft, horizontalScrollPosition]
+	)
+
+	// Apply vertical scroll position
+	const updateVerticalScrollPosition = useCallback(
+		(newPosition: number) => {
+			// Only process if we need vertical scrolling
+			if (!midiMetadata.needsVerticalScroll) return
+
+			// Ensure position is within bounds (0 to 1)
+			const boundedPosition = Math.max(0, Math.min(newPosition, 1))
+
+			// Only update if position has changed
+			if (boundedPosition === verticalScrollPosition) return
+
+			// Set flag to prevent feedback loops
+			isScrollingSyncRef.current = true
+
+			// Calculate the total range of pitches
+			const totalRange = midiMetadata.maxPitch - midiMetadata.minPitch + 1
+
+			// Calculate how many notes we can scroll through
+			const scrollableNotes = totalRange - VISIBLE_NOTE_RANGE
+
+			// At position 0, we show the highest notes
+			// At position 1, we show the lowest notes
+			// Calculate which notes should be visible based on scroll position
+			const noteOffset = Math.round(boundedPosition * scrollableNotes)
+
+			// Calculate the new visible pitch range
+			const newVisibleMaxPitch = midiMetadata.maxPitch - noteOffset
+			const newVisibleMinPitch = newVisibleMaxPitch - VISIBLE_NOTE_RANGE + 1
+
+			// Update the state with new visible pitch range
+			setMidiMetadata((prev) => ({
+				...prev,
+				visibleMinPitch: newVisibleMinPitch,
+				visibleMaxPitch: newVisibleMaxPitch,
+			}))
+
+			// Finally update React state
+			setVerticalScrollPosition(boundedPosition)
+
+			// Batch draw for performance
+			if (stageRef.current) {
+				stageRef.current.batchDraw()
+			}
+
+			// Reset flag after a short delay
+			setTimeout(() => {
+				isScrollingSyncRef.current = false
+			}, 50)
+		},
+		[midiMetadata]
 	)
 
 	// Handle auto-scrolling during playback
@@ -293,15 +464,15 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 		const viewportWidth = containerWidth
 
 		// Check if playhead is outside visible area
-		const isOutsideRight = playheadX > scrollPosition + viewportWidth * 0.7
-		const isOutsideLeft = playheadX < scrollPosition + viewportWidth * 0.3
+		const isOutsideRight = playheadX > horizontalScrollPosition + viewportWidth * 0.7
+		const isOutsideLeft = playheadX < horizontalScrollPosition + viewportWidth * 0.3
 
 		if (isOutsideRight || isOutsideLeft) {
 			// Position playhead at 30% from left
 			const newScrollPosition = Math.max(0, playheadX - viewportWidth * 0.3)
-			updateScrollPosition(Math.min(newScrollPosition, midiMetadata.maxScrollLeft))
+			updateHorizontalScrollPosition(Math.min(newScrollPosition, midiMetadata.maxScrollLeft))
 		}
-	}, [playing, currentTime, containerWidth, midiMetadata.maxScrollLeft, scrollPosition, updateScrollPosition])
+	}, [playing, currentTime, containerWidth, midiMetadata.maxScrollLeft, horizontalScrollPosition, updateHorizontalScrollPosition])
 
 	// Auto-scroll during playback
 	useEffect(() => {
@@ -310,13 +481,13 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 		}
 	}, [playing, currentTime, autoScrollIfNeeded])
 
-	// Handle scrollbar events
-	const handleScrollbarScroll = (e: React.UIEvent<HTMLDivElement>) => {
+	// Handle horizontal scrollbar events
+	const handleHorizontalScrollbarScroll = (e: React.UIEvent<HTMLDivElement>) => {
 		// Skip if we're already processing a scroll update or during playback
 		if (isScrollingSyncRef.current || playing) {
-			if (playing && scrollbarRef.current) {
+			if (playing && horizontalScrollbarRef.current) {
 				// Force scrollbar to match current position during playback
-				scrollbarRef.current.scrollLeft = scrollPosition
+				horizontalScrollbarRef.current.scrollLeft = horizontalScrollPosition
 			}
 			return
 		}
@@ -332,7 +503,26 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 		}
 
 		// Debounced state update
-		updateScrollPosition(newPosition)
+		updateHorizontalScrollPosition(newPosition)
+	}
+
+	// Handle vertical scrollbar events
+	const handleVerticalScrollbarScroll = (e: React.UIEvent<HTMLDivElement>) => {
+		// Skip if we're already processing a scroll update
+		if (isScrollingSyncRef.current) return
+
+		// Here we map the scrollbar position directly to our custom scroll range
+		// The scrollbar's scrollTop range is from 0 to scrollHeight - clientHeight
+		// We need to map this to 0 to maxScrollTop for our note range
+		const scrollbarElement = e.currentTarget
+		const scrollRange = scrollbarElement.scrollHeight - scrollbarElement.clientHeight
+
+		if (scrollRange <= 0) return // Avoid division by zero
+
+		const scrollRatio = scrollbarElement.scrollTop / scrollRange
+		const newPosition = Math.round(scrollRatio * midiMetadata.maxScrollTop)
+
+		updateVerticalScrollPosition(newPosition)
 	}
 
 	// Handle wheel events on roll area
@@ -341,19 +531,45 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 			// Prevent default browser behavior
 			e.preventDefault()
 
-			// Skip during playback
-			if (playing) return
-
 			// Skip if we're already processing a scroll update
 			if (isScrollingSyncRef.current) return
 
-			// Calculate new position
-			const delta = e.deltaX || e.deltaY
-			const newPosition = Math.max(0, Math.min(scrollPosition + delta, midiMetadata.maxScrollLeft))
+			// Check if this is a horizontal touchpad gesture (significant deltaX)
+			const isHorizontalGesture = Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 0
 
-			updateScrollPosition(newPosition)
+			// Skip during playback for horizontal scrolling (unless shift modifier)
+			if (playing && !e.shiftKey && !isHorizontalGesture) return
+
+			// Handle horizontal scrolling when:
+			// 1. It's explicitly a horizontal gesture (touchpad swipe left/right), OR
+			// 2. Shift is pressed, OR
+			// 3. There's no vertical scrolling needed
+			if (isHorizontalGesture || e.shiftKey || !midiMetadata.needsVerticalScroll) {
+				// Use deltaX for horizontal gestures, otherwise fall back to deltaY
+				const delta = isHorizontalGesture ? e.deltaX : e.deltaY || e.deltaX
+				const newPosition = Math.max(0, Math.min(horizontalScrollPosition + delta, midiMetadata.maxScrollLeft))
+				updateHorizontalScrollPosition(newPosition)
+			} else {
+				// Vertical scrolling - Increased speed
+				// Calculate a faster scroll increment based on deltaY
+				const baseIncrement = 0.15 // Increased from 0.05 (3x faster)
+				// Scale by wheel delta magnitude, capped at a reasonable value
+				const deltaScale = Math.min(Math.abs(e.deltaY) / 100, 3)
+				const scrollIncrement = baseIncrement * Math.sign(e.deltaY) * deltaScale
+
+				const newPosition = Math.max(0, Math.min(verticalScrollPosition + scrollIncrement, 1))
+				updateVerticalScrollPosition(newPosition)
+			}
 		},
-		[playing, scrollPosition, midiMetadata.maxScrollLeft, updateScrollPosition]
+		[
+			playing,
+			midiMetadata.needsVerticalScroll,
+			midiMetadata.maxScrollLeft,
+			horizontalScrollPosition,
+			verticalScrollPosition,
+			updateHorizontalScrollPosition,
+			updateVerticalScrollPosition,
+		]
 	)
 
 	// Set up wheel event handler
@@ -373,13 +589,13 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 	const pianoKeysData = useMemo(() => {
 		if (!midiMetadata.initialized) return []
 
-		const { minPitch, maxPitch, pianoRollHeight } = midiMetadata
+		const { visibleMinPitch, visibleMaxPitch, visiblePianoRollHeight } = midiMetadata
 		const keys = []
 
-		for (let pitch = minPitch; pitch <= maxPitch; pitch++) {
+		for (let pitch = visibleMinPitch; pitch <= visibleMaxPitch; pitch++) {
 			const isWhite = isWhiteKey(pitch)
-			const relativePosition = pitch - minPitch
-			const y = pianoRollHeight - (relativePosition + 1) * NOTE_HEIGHT
+			const relativePosition = pitch - visibleMinPitch
+			const y = visiblePianoRollHeight - (relativePosition + 1) * NOTE_HEIGHT
 
 			keys.push({
 				pitch,
@@ -392,26 +608,26 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 		}
 
 		return keys
-	}, [midiMetadata.initialized, midiMetadata.minPitch, midiMetadata.maxPitch, midiMetadata.pianoRollHeight])
+	}, [midiMetadata.initialized, midiMetadata.visibleMinPitch, midiMetadata.visibleMaxPitch, midiMetadata.visiblePianoRollHeight])
 
 	// Generate grid lines data
 	const gridLinesData = useMemo(() => {
 		if (!midiMetadata.initialized) return { horizontalLines: [], verticalLines: [] }
 
-		const { minPitch, maxPitch, pianoRollHeight, rollWidth, duration } = midiMetadata
+		const { visibleMinPitch, visibleMaxPitch, visiblePianoRollHeight, rollWidth, duration } = midiMetadata
 		const horizontalLines = []
 		const verticalLines: { time: number; x: number }[] = [] // Empty array with explicit type
 
 		// Horizontal lines (pitch divisions)
-		for (let pitch = minPitch; pitch <= maxPitch; pitch++) {
-			const relativePosition = pitch - minPitch
-			const y = pianoRollHeight - (relativePosition + 1) * NOTE_HEIGHT
+		for (let pitch = visibleMinPitch; pitch <= visibleMaxPitch; pitch++) {
+			const relativePosition = pitch - visibleMinPitch
+			const y = visiblePianoRollHeight - (relativePosition + 1) * NOTE_HEIGHT
 
 			horizontalLines.push({
 				pitch,
 				y,
 				isWhite: isWhiteKey(pitch),
-				isC: pitch % 12 === 0,
+				isC: pitch % 12 === 0, // Keep this for styling rows
 			})
 		}
 
@@ -420,9 +636,9 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 		return { horizontalLines, verticalLines }
 	}, [
 		midiMetadata.initialized,
-		midiMetadata.minPitch,
-		midiMetadata.maxPitch,
-		midiMetadata.pianoRollHeight,
+		midiMetadata.visibleMinPitch,
+		midiMetadata.visibleMaxPitch,
+		midiMetadata.visiblePianoRollHeight,
 		midiMetadata.rollWidth,
 		midiMetadata.duration,
 	])
@@ -431,7 +647,7 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 	const notesData = useMemo(() => {
 		if (!midiObject || !midiObject.tracks || !midiMetadata.initialized) return []
 
-		const { minPitch, pianoRollHeight } = midiMetadata
+		const { minPitch, visibleMinPitch, visibleMaxPitch, visiblePianoRollHeight } = midiMetadata
 		const result: {
 			id: string
 			x: number
@@ -446,30 +662,34 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 			isLongNote: boolean
 		}[] = []
 
-		// Track colors that match theme but use direct color values
+		// Use stem color for tracks with proper opacity handling
 		const trackColors = [
-			'rgba(59, 130, 246, 0.8)', // Blue - Primary-like
-			'rgba(239, 68, 68, 0.8)', // Red - Chart-1-like
-			'rgba(16, 185, 129, 0.8)', // Green - Chart-2-like
-			'rgba(245, 158, 11, 0.8)', // Amber - Chart-3-like
-			'rgba(168, 85, 247, 0.8)', // Purple - Chart-5-like
+			addOpacity(stemColor, 0.8), // Main stem color with opacity
+			'rgba(239, 68, 68, 0.8)', // Alternative colors for multi-track MIDIs
+			'rgba(16, 185, 129, 0.8)',
+			'rgba(245, 158, 11, 0.8)',
+			'rgba(168, 85, 247, 0.8)',
 		]
 
 		// Process each track
 		midiObject.tracks.forEach((track, trackIndex) => {
 			if (!track.notes || track.notes.length === 0) return
 
-			const trackColor = trackColors[trackIndex % trackColors.length]
-			const trackBorderColor = trackColor.replace('0.8', '1') // Full opacity for border
+			// Use the stem color for the main track, fallback to alternate colors for additional tracks
+			const trackColor = trackIndex === 0 ? addOpacity(stemColor, 0.8) : trackColors[trackIndex % trackColors.length]
+			const trackBorderColor = trackIndex === 0 ? stemColor : trackColor.replace('0.8', '1')
 
 			// Process each note
 			track.notes.forEach((note, noteIndex) => {
 				if (typeof note.midi !== 'number') return
 
+				// Skip notes outside of visible pitch range
+				if (note.midi < visibleMinPitch || note.midi > visibleMaxPitch) return
+
 				// Calculate position and dimensions
 				const x = note.time * PIXELS_PER_SECOND
 				const width = Math.max(note.duration * PIXELS_PER_SECOND, 2) // Ensure minimum width
-				const y = pianoRollHeight - (note.midi - minPitch + 1) * NOTE_HEIGHT
+				const y = visiblePianoRollHeight - (note.midi - visibleMinPitch + 1) * NOTE_HEIGHT
 
 				result.push({
 					id: `${trackIndex}-${noteIndex}`,
@@ -488,12 +708,241 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 		})
 
 		return result
-	}, [midiObject, midiMetadata.initialized, midiMetadata.minPitch, midiMetadata.pianoRollHeight])
+	}, [
+		midiObject,
+		midiMetadata.initialized,
+		midiMetadata.minPitch,
+		midiMetadata.visibleMinPitch,
+		midiMetadata.visibleMaxPitch,
+		midiMetadata.visiblePianoRollHeight,
+		stemColor,
+	])
 
 	// Calculate minimum container height
 	const MIN_CONTAINER_HEIGHT = useMemo(() => {
-		return MIN_NOTE_RANGE * NOTE_HEIGHT + SCROLLBAR_HEIGHT
+		return VISIBLE_NOTE_RANGE * NOTE_HEIGHT + SCROLLBAR_HEIGHT
 	}, [])
+
+	// Set up custom scrollbar handlers
+	useEffect(() => {
+		const scrollThumb = scrollThumbRef.current
+		const scrollbarContainer = customScrollbarRef.current
+
+		if (!scrollThumb || !scrollbarContainer) return
+
+		// Handle mouse down on thumb
+		const handleMouseDown = (e: MouseEvent) => {
+			setIsDraggingThumb(true)
+			dragStartY.current = e.clientY
+			dragStartScrollPosition.current = verticalScrollPosition
+
+			// Prevent text selection during drag
+			document.body.style.userSelect = 'none'
+		}
+
+		// Handle mouse move for dragging
+		const handleMouseMove = (e: MouseEvent) => {
+			if (!isDraggingThumb) return
+
+			const deltaY = e.clientY - dragStartY.current
+			const scrollbarHeight = scrollbarContainer.clientHeight
+			const thumbHeight = scrollThumb.clientHeight
+
+			// Calculate the available travel distance
+			const availableTravel = scrollbarHeight - thumbHeight
+
+			if (availableTravel <= 0) return
+
+			// Calculate new position (0-1)
+			const newScrollPosition = Math.max(0, Math.min(1, dragStartScrollPosition.current + deltaY / availableTravel))
+
+			// Update the scroll position
+			updateVerticalScrollPosition(newScrollPosition)
+
+			// Update thumb position visually
+			scrollThumb.style.top = `${newScrollPosition * availableTravel}px`
+		}
+
+		// Handle mouse up to end dragging
+		const handleMouseUp = () => {
+			setIsDraggingThumb(false)
+			document.body.style.userSelect = ''
+		}
+
+		// Handle click on scrollbar track (not on thumb)
+		const handleTrackClick = (e: MouseEvent) => {
+			// Ignore if clicked on thumb
+			if (e.target === scrollThumb) return
+
+			const scrollbarHeight = scrollbarContainer.clientHeight
+			const thumbHeight = scrollThumb.clientHeight
+
+			// Calculate available travel
+			const availableTravel = scrollbarHeight - thumbHeight
+
+			if (availableTravel <= 0) return
+
+			// Get click position relative to scrollbar
+			const rect = scrollbarContainer.getBoundingClientRect()
+			const clickPositionY = e.clientY - rect.top
+
+			// Calculate scroll position (0-1), accounting for thumb height
+			const clickPositionRatio = (clickPositionY - thumbHeight / 2) / availableTravel
+			const newScrollPosition = Math.max(0, Math.min(1, clickPositionRatio))
+
+			// Update scroll position
+			updateVerticalScrollPosition(newScrollPosition)
+
+			// Update thumb position visually
+			scrollThumb.style.top = `${newScrollPosition * availableTravel}px`
+		}
+
+		// Set up event listeners
+		scrollThumb.addEventListener('mousedown', handleMouseDown)
+		scrollbarContainer.addEventListener('click', handleTrackClick)
+		document.addEventListener('mousemove', handleMouseMove)
+		document.addEventListener('mouseup', handleMouseUp)
+
+		// Update thumb position when vertical scroll position changes
+		const updateThumbPosition = () => {
+			const scrollbarHeight = scrollbarContainer.clientHeight
+			const thumbHeight = scrollThumb.clientHeight
+			const availableTravel = scrollbarHeight - thumbHeight
+
+			if (availableTravel <= 0) return
+
+			scrollThumb.style.top = `${verticalScrollPosition * availableTravel}px`
+		}
+
+		// Set initial thumb position
+		updateThumbPosition()
+
+		// Clean up
+		return () => {
+			scrollThumb.removeEventListener('mousedown', handleMouseDown)
+			scrollbarContainer.removeEventListener('click', handleTrackClick)
+			document.removeEventListener('mousemove', handleMouseMove)
+			document.removeEventListener('mouseup', handleMouseUp)
+		}
+	}, [isDraggingThumb, verticalScrollPosition, updateVerticalScrollPosition])
+
+	// Set up custom horizontal scrollbar handlers
+	useEffect(() => {
+		const scrollThumb = scrollHorizontalThumbRef.current
+		const scrollbarContainer = customHorizontalScrollbarRef.current
+
+		if (!scrollThumb || !scrollbarContainer) return
+
+		// Handle mouse down on thumb
+		const handleMouseDown = (e: MouseEvent) => {
+			// Skip during playback
+			if (playing) return
+
+			setIsDraggingHorizontalThumb(true)
+			dragStartX.current = e.clientX
+			dragStartHorizontalScrollPosition.current = horizontalScrollPosition
+
+			// Prevent text selection during drag
+			document.body.style.userSelect = 'none'
+		}
+
+		// Handle mouse move for dragging
+		const handleMouseMove = (e: MouseEvent) => {
+			if (!isDraggingHorizontalThumb || playing) return
+
+			const deltaX = e.clientX - dragStartX.current
+			const scrollbarWidth = scrollbarContainer.clientWidth
+			const thumbWidth = scrollThumb.clientWidth
+
+			// Calculate the available travel distance
+			const availableTravel = scrollbarWidth - thumbWidth
+
+			if (availableTravel <= 0) return
+
+			// Calculate normalized position (0-1)
+			const normalizedPosition = Math.max(
+				0,
+				Math.min(1, dragStartHorizontalScrollPosition.current / midiMetadata.maxScrollLeft + deltaX / availableTravel)
+			)
+
+			// Calculate absolute position
+			const absolutePosition = normalizedPosition * midiMetadata.maxScrollLeft
+
+			// Update the scroll position
+			updateHorizontalScrollPosition(absolutePosition)
+		}
+
+		// Handle mouse up to end dragging
+		const handleMouseUp = () => {
+			setIsDraggingHorizontalThumb(false)
+			document.body.style.userSelect = ''
+		}
+
+		// Handle click on scrollbar track (not on thumb)
+		const handleTrackClick = (e: MouseEvent) => {
+			// Skip during playback
+			if (playing) return
+
+			// Ignore if clicked on thumb
+			if (e.target === scrollThumb) return
+
+			const scrollbarWidth = scrollbarContainer.clientWidth
+			const thumbWidth = scrollThumb.clientWidth
+
+			// Calculate available travel
+			const availableTravel = scrollbarWidth - thumbWidth
+
+			if (availableTravel <= 0) return
+
+			// Get click position relative to scrollbar
+			const rect = scrollbarContainer.getBoundingClientRect()
+			const clickPositionX = e.clientX - rect.left
+
+			// Calculate normalized position (0-1), accounting for thumb width
+			const normalizedPosition = (clickPositionX - thumbWidth / 2) / availableTravel
+			const boundedPosition = Math.max(0, Math.min(1, normalizedPosition))
+
+			// Calculate absolute position
+			const absolutePosition = boundedPosition * midiMetadata.maxScrollLeft
+
+			// Update scroll position
+			updateHorizontalScrollPosition(absolutePosition)
+		}
+
+		// Set up event listeners
+		scrollThumb.addEventListener('mousedown', handleMouseDown)
+		scrollbarContainer.addEventListener('click', handleTrackClick)
+		document.addEventListener('mousemove', handleMouseMove)
+		document.addEventListener('mouseup', handleMouseUp)
+
+		// Update thumb position when horizontal scroll position changes
+		const updateThumbPosition = () => {
+			if (playing) return // Skip updates during playback
+
+			const scrollbarWidth = scrollbarContainer.clientWidth
+			const thumbWidth = scrollThumb.clientWidth
+			const availableTravel = scrollbarWidth - thumbWidth
+
+			if (availableTravel <= 0 || midiMetadata.maxScrollLeft <= 0) return
+
+			// Calculate normalized position (0-1)
+			const normalizedPosition = horizontalScrollPosition / midiMetadata.maxScrollLeft
+
+			// Update thumb position
+			scrollThumb.style.left = `${normalizedPosition * availableTravel}px`
+		}
+
+		// Set initial thumb position
+		updateThumbPosition()
+
+		// Clean up
+		return () => {
+			scrollThumb.removeEventListener('mousedown', handleMouseDown)
+			scrollbarContainer.removeEventListener('click', handleTrackClick)
+			document.removeEventListener('mousemove', handleMouseMove)
+			document.removeEventListener('mouseup', handleMouseUp)
+		}
+	}, [isDraggingHorizontalThumb, horizontalScrollPosition, updateHorizontalScrollPosition, midiMetadata.maxScrollLeft, playing])
 
 	return (
 		<div
@@ -506,10 +955,10 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 				{/* Piano keys */}
 				<div
 					className="flex-shrink-0 relative bg-zinc-900"
-					style={{ width: WHITE_KEY_WIDTH, height: midiMetadata.pianoRollHeight, minHeight: 100 }}
+					style={{ width: WHITE_KEY_WIDTH, height: midiMetadata.visiblePianoRollHeight, minHeight: 100 }}
 				>
 					{midiMetadata.initialized && (
-						<Stage width={WHITE_KEY_WIDTH} height={midiMetadata.pianoRollHeight}>
+						<Stage width={WHITE_KEY_WIDTH} height={midiMetadata.visiblePianoRollHeight}>
 							<Layer>
 								{/* Piano keys */}
 								{pianoKeysData.map((key) => (
@@ -547,9 +996,9 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 				{/* Piano roll */}
 				<div
 					ref={rollAreaRef}
-					className="flex-grow overflow-hidden"
+					className="flex-grow overflow-hidden relative"
 					style={{
-						height: midiMetadata.pianoRollHeight,
+						height: midiMetadata.visiblePianoRollHeight,
 						position: 'relative',
 					}}
 				>
@@ -557,7 +1006,7 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 						<Stage
 							ref={stageRef}
 							width={containerWidth}
-							height={midiMetadata.pianoRollHeight}
+							height={midiMetadata.visiblePianoRollHeight}
 							perfectDrawEnabled={false}
 							shadowForStrokeEnabled={false}
 						>
@@ -567,7 +1016,7 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 									x={0}
 									y={0}
 									width={containerWidth}
-									height={midiMetadata.pianoRollHeight}
+									height={midiMetadata.visiblePianoRollHeight}
 									fill="rgba(18, 18, 23, 0.2)"
 								/>
 
@@ -634,45 +1083,102 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '' }: 
 									{/* Playhead line */}
 									<Line
 										points={[
-											currentTime * PIXELS_PER_SECOND - scrollPosition,
+											currentTime * PIXELS_PER_SECOND - horizontalScrollPosition,
 											0,
-											currentTime * PIXELS_PER_SECOND - scrollPosition,
-											midiMetadata.pianoRollHeight,
+											currentTime * PIXELS_PER_SECOND - horizontalScrollPosition,
+											midiMetadata.visiblePianoRollHeight,
 										]}
-										stroke="#3B82F6"
+										stroke={stemColor}
 										strokeWidth={2}
 									/>
 
 									{/* Triangle indicator */}
 									<Line
 										points={[
-											currentTime * PIXELS_PER_SECOND - scrollPosition - 6,
+											currentTime * PIXELS_PER_SECOND - horizontalScrollPosition - 6,
 											0,
-											currentTime * PIXELS_PER_SECOND - scrollPosition + 6,
+											currentTime * PIXELS_PER_SECOND - horizontalScrollPosition + 6,
 											0,
-											currentTime * PIXELS_PER_SECOND - scrollPosition,
+											currentTime * PIXELS_PER_SECOND - horizontalScrollPosition,
 											8,
 										]}
 										closed={true}
-										fill="#3B82F6"
+										fill={stemColor}
 									/>
 								</Group>
 							</Layer>
 						</Stage>
 					)}
+
+					{/* Custom vertical scrollbar */}
+					{midiMetadata.needsVerticalScroll && (
+						<div
+							ref={customScrollbarRef}
+							className="absolute right-0 top-0 bottom-0"
+							style={{
+								width: SCROLLBAR_WIDTH,
+								backgroundColor: 'hsl(222.2 84% 5.9%)', // Very dark blue, slightly lighter than background
+								border: 'none',
+							}}
+						>
+							<div
+								ref={scrollThumbRef}
+								className="absolute cursor-pointer"
+								style={{
+									width: '60%',
+									height: '60px',
+									backgroundColor: 'hsl(217 15% 65%)', // Muted blue-gray color
+									borderRadius: '3px',
+									top: 0,
+									left: '20%', // Center it horizontally (20% on each side)
+									transition: isDraggingThumb ? 'none' : 'top 0.1s',
+								}}
+							/>
+						</div>
+					)}
 				</div>
 			</div>
 
-			{/* Scrollbar */}
+			{/* Horizontal scrollbar */}
 			<div className="w-full flex-shrink-0" style={{ height: SCROLLBAR_HEIGHT }}>
 				<div
-					ref={scrollbarRef}
-					className={cn('overflow-x-auto w-full h-full scrollbar-thumb-rounded', playing && 'pointer-events-none opacity-50')}
-					style={{ overflowY: 'hidden' }}
-					onScroll={handleScrollbarScroll}
+					ref={customHorizontalScrollbarRef}
+					className="relative h-full"
+					style={{
+						backgroundColor: 'hsl(222.2 84% 5.9%)', // Very dark blue, slightly lighter than background
+						border: 'none',
+						width: midiMetadata.needsVerticalScroll ? `calc(100% - ${SCROLLBAR_WIDTH}px)` : '100%',
+					}}
 				>
-					<div style={{ width: midiMetadata.rollWidth, height: '1px' }} />
+					<div
+						ref={scrollHorizontalThumbRef}
+						className="absolute cursor-pointer"
+						style={{
+							height: '60%',
+							top: '20%', // Center it vertically (20% on each side)
+							width:
+								midiMetadata.maxScrollLeft > 0
+									? `${Math.max(40, (containerWidth / midiMetadata.rollWidth) * 100)}%`
+									: '100%',
+							backgroundColor: 'hsl(217 15% 65%)', // Muted blue-gray color
+							borderRadius: '3px',
+							left: 0,
+							transition: isDraggingHorizontalThumb || playing ? 'none' : 'left 0.1s',
+						}}
+					/>
 				</div>
+
+				{/* Add the corner square for when both scrollbars are visible */}
+				{midiMetadata.needsVerticalScroll && (
+					<div
+						className="absolute bottom-0 right-0"
+						style={{
+							width: SCROLLBAR_WIDTH,
+							height: SCROLLBAR_HEIGHT,
+							backgroundColor: 'hsl(222.2 84% 5.9%)', // Match scrollbar track color
+						}}
+					/>
+				)}
 			</div>
 		</div>
 	)

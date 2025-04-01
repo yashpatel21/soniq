@@ -159,6 +159,15 @@
 
 .stem-colored-slider [data-slot='slider-thumb'] {
 	border-color: var(--slider-thumb, rgb(79, 70, 229));
+	background-color: var(--slider-thumb, rgb(79, 70, 229));
+}
+
+/* Remove focus/hover ring on slider thumbs */
+.stem-colored-slider [data-slot='slider-thumb']:hover,
+.stem-colored-slider [data-slot='slider-thumb']:focus {
+	outline: none;
+	box-shadow: none;
+	border-color: var(--slider-thumb, rgb(79, 70, 229));
 }
 
 /* Text gradient animation */
