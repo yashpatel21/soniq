@@ -500,7 +500,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 						) : (
 							<>
 								{/* Main flex container with proper scrolling */}
-								<div className="flex flex-col flex-1 overflow-auto">
+								<div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
 									{/* Piano roll container with fixed height and scrolling */}
 									<div className="min-h-[280px] px-4 pt-2 pb-0">
 										<div className="w-full h-full min-h-[280px] bg-black/10 dark:bg-white/5 rounded-lg overflow-hidden">
@@ -524,7 +524,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 													className="border-none rounded-md overflow-hidden bg-muted/30"
 												>
 													<AccordionTrigger
-														className="text-sm py-2 px-3 flex items-center hover:no-underline transition-colors duration-200 text-foreground"
+														className="text-sm py-2 px-3 flex items-center hover:no-underline transition-colors duration-200 text-foreground [&>svg]:text-foreground"
 														style={{
 															borderLeft: `2px solid ${stemColor}40`,
 														}}
@@ -667,13 +667,13 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 										<Separator className="mt-4 mb-5" />
 
 										{/* Playback controls only */}
-										<div className="flex items-center flex-wrap gap-4">
+										<div className="flex items-center flex-wrap gap-4 w-full pr-2 max-w-full">
 											<div className="flex items-center gap-2">
 												<Button
 													variant="outline"
 													size="icon"
 													onClick={resetPlayback}
-													className="rounded-full h-10 w-10 flex items-center justify-center "
+													className="rounded-full h-10 w-10 flex items-center justify-center hover:brightness-110"
 												>
 													<SkipBack className="h-5 w-5" />
 												</Button>
@@ -682,7 +682,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 													variant="outline"
 													size="icon"
 													onClick={togglePlayback}
-													className="rounded-full h-10 w-10 flex items-center justify-center hover:scale-105 hover:brightness-110 hover:shadow-md transition-all duration-200"
+													className="rounded-full h-10 w-10 flex items-center justify-center hover:brightness-125 hover:shadow-md transition-all duration-200"
 													style={{
 														borderColor: `${stemColor}40`,
 														...(isPlaying

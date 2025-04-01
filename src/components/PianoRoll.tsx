@@ -818,9 +818,23 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '', st
 			const rect = scrollbarContainer.getBoundingClientRect()
 			const clickPositionY = e.clientY - rect.top
 
-			// Calculate scroll position (0-1), accounting for thumb height
-			const clickPositionRatio = (clickPositionY - thumbHeight / 2) / availableTravel
-			const newScrollPosition = Math.max(0, Math.min(1, clickPositionRatio))
+			// Calculate normalized position (0-1) based on click position
+			// Factor in thumb height to make the center of the thumb go to the clicked position
+			let newScrollPosition
+
+			if (clickPositionY < thumbHeight / 2) {
+				// Click near the top - go to the very top
+				newScrollPosition = 0
+			} else if (clickPositionY > scrollbarHeight - thumbHeight / 2) {
+				// Click near the bottom - go to the very bottom
+				newScrollPosition = 1
+			} else {
+				// Click in the middle area - center the thumb on the click
+				newScrollPosition = (clickPositionY - thumbHeight / 2) / availableTravel
+			}
+
+			// Ensure bounds
+			newScrollPosition = Math.max(0, Math.min(1, newScrollPosition))
 
 			// Update scroll position
 			updateVerticalScrollPosition(newScrollPosition)
@@ -1155,15 +1169,44 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '', st
 						>
 							<div
 								ref={scrollThumbRef}
-								className="absolute cursor-pointer"
+								className="absolute cursor-pointer hover:brightness-110 hover:opacity-95 active:brightness-90"
 								style={{
 									width: '60%',
-									height: '60px',
-									backgroundColor: 'hsl(217 15% 65%)', // Muted blue-gray color
+									// Calculate the thumb height based on the proportion of visible notes to total notes
+									// Ensure a minimum height for usability
+									height: (() => {
+										const totalNotes = midiMetadata.maxPitch - midiMetadata.minPitch + 1
+										const ratio = VISIBLE_NOTE_RANGE / totalNotes
+										const percentHeight = ratio * 100
+
+										// If percentage would be too small, use a minimum pixel height
+										if (percentHeight < 10 && customScrollbarRef.current) {
+											const minPixelHeight = 30 // Minimum height in pixels
+											const containerHeight = customScrollbarRef.current.clientHeight
+											return `${Math.max(minPixelHeight, containerHeight * ratio)}px`
+										}
+
+										// Otherwise use percentage (with a reasonable minimum)
+										return `${Math.max(10, percentHeight)}%`
+									})(),
+									backgroundColor: (() => {
+										// Make the thumb color visually indicate the scroll amount
+										// Smaller ratio (more scrollable content) = darker/more prominent color
+										const totalNotes = midiMetadata.maxPitch - midiMetadata.minPitch + 1
+										const visibilityRatio = VISIBLE_NOTE_RANGE / totalNotes
+										if (visibilityRatio > 0.6) {
+											return 'hsl(217 15% 75%)' // Lighter color when most content is visible
+										} else if (visibilityRatio > 0.3) {
+											return 'hsl(217 25% 65%)' // Medium color
+										} else {
+											return 'hsl(217 35% 60%)' // Darker, more prominent color
+										}
+									})(),
 									borderRadius: '3px',
 									top: 0,
 									left: '20%', // Center it horizontally (20% on each side)
 									transition: isDraggingThumb ? 'none' : 'top 0.1s',
+									boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
 								}}
 							/>
 						</div>
