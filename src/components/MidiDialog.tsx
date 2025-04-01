@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { PianoRoll } from '@/components/PianoRoll'
-import { Download, FileMusic, Pause, Play, SkipBack, Volume, Volume1, Volume2, VolumeX, RefreshCw } from 'lucide-react'
+import { Download, FileMusic, Pause, Play, SkipBack, Volume, Volume1, Volume2, VolumeX, RefreshCw, SlidersHorizontal } from 'lucide-react'
 import { formatTime } from '@/lib/utils/ui/utils'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -502,7 +502,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 								{/* Main flex container with proper scrolling */}
 								<div className="flex flex-col flex-1 overflow-auto">
 									{/* Piano roll container with fixed height and scrolling */}
-									<div className="min-h-[280px] p-4 pb-0">
+									<div className="min-h-[280px] px-4 pt-2 pb-0">
 										<div className="w-full h-full min-h-[280px] bg-black/10 dark:bg-white/5 rounded-lg overflow-hidden">
 											<PianoRoll
 												midiObject={midiObject}
@@ -515,140 +515,156 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 									</div>
 
 									{/* Controls in a separately scrollable area */}
-									<div className="p-4 pt-2 flex-shrink-0">
+									<div className="p-4 pt-2 pb-0 flex-shrink-0">
 										{/* MIDI extraction parameters */}
-										<Accordion type="single" collapsible className="w-full">
-											<AccordionItem value="extraction-params">
-												<AccordionTrigger className="text-sm font-medium py-2">
-													MIDI Extraction Parameters
-												</AccordionTrigger>
-												<AccordionContent className="pt-1 pb-2">
-													<div className="space-y-3">
-														{/* Parameters in 3 columns */}
-														<div className="grid grid-cols-3 gap-3">
-															{/* Onset Threshold */}
-															<div className="space-y-2">
-																<div className="flex items-center gap-1">
-																	<Label className="text-xs">
-																		Onset: {formatPercentage(onsetThreshold)}
-																	</Label>
-																	<TooltipProvider>
-																		<Tooltip>
-																			<TooltipTrigger asChild>
-																				<div className="h-3.5 w-3.5 rounded-full bg-muted flex items-center justify-center text-[10px] cursor-help">
-																					i
-																				</div>
-																			</TooltipTrigger>
-																			<TooltipContent side="top" className="max-w-[180px]">
-																				Controls how sensitive the algorithm is to detecting new
-																				notes. Higher values require stronger onsets.
-																			</TooltipContent>
-																		</Tooltip>
-																	</TooltipProvider>
-																</div>
-																<Slider
-																	value={[onsetThreshold * 100]}
-																	min={10}
-																	max={90}
-																	step={5}
-																	onValueChange={(values) => setOnsetThreshold(values[0] / 100)}
-																	className="stem-colored-slider"
-																	style={
-																		{
-																			'--slider-range': stemColor,
-																			'--slider-thumb': stemColor,
-																		} as React.CSSProperties
-																	}
-																/>
-															</div>
-
-															{/* Frame Threshold */}
-															<div className="space-y-2">
-																<div className="flex items-center gap-1">
-																	<Label className="text-xs">
-																		Frame: {formatPercentage(frameThreshold)}
-																	</Label>
-																	<TooltipProvider>
-																		<Tooltip>
-																			<TooltipTrigger asChild>
-																				<div className="h-3.5 w-3.5 rounded-full bg-muted flex items-center justify-center text-[10px] cursor-help">
-																					i
-																				</div>
-																			</TooltipTrigger>
-																			<TooltipContent side="top" className="max-w-[180px]">
-																				Determines how loud a note needs to be to be detected.
-																				Higher values require louder notes.
-																			</TooltipContent>
-																		</Tooltip>
-																	</TooltipProvider>
-																</div>
-																<Slider
-																	value={[frameThreshold * 100]}
-																	min={10}
-																	max={90}
-																	step={5}
-																	onValueChange={(values) => setFrameThreshold(values[0] / 100)}
-																	className="stem-colored-slider"
-																	style={
-																		{
-																			'--slider-range': stemColor,
-																			'--slider-thumb': stemColor,
-																		} as React.CSSProperties
-																	}
-																/>
-															</div>
-
-															{/* Min Note Length */}
-															<div className="space-y-2">
-																<div className="flex items-center gap-1">
-																	<Label className="text-xs">Length: {minNoteLength}</Label>
-																	<TooltipProvider>
-																		<Tooltip>
-																			<TooltipTrigger asChild>
-																				<div className="h-3.5 w-3.5 rounded-full bg-muted flex items-center justify-center text-[10px] cursor-help">
-																					i
-																				</div>
-																			</TooltipTrigger>
-																			<TooltipContent side="top" className="max-w-[180px]">
-																				Filters out notes shorter than this threshold (in frames).
-																				Higher values remove more short notes.
-																			</TooltipContent>
-																		</Tooltip>
-																	</TooltipProvider>
-																</div>
-																<Slider
-																	value={[minNoteLength]}
-																	min={1}
-																	max={30}
-																	step={1}
-																	onValueChange={(values) => setMinNoteLength(values[0])}
-																	className="stem-colored-slider"
-																	style={
-																		{
-																			'--slider-range': stemColor,
-																			'--slider-thumb': stemColor,
-																		} as React.CSSProperties
-																	}
-																/>
-															</div>
+										<div className="w-full mb-4 mt-1">
+											<Accordion type="single" collapsible className="w-full">
+												<AccordionItem
+													value="extraction-params"
+													className="border-none rounded-md overflow-hidden bg-muted/30"
+												>
+													<AccordionTrigger
+														className="text-sm py-2 px-3 flex items-center hover:no-underline transition-colors duration-200 text-foreground"
+														style={{
+															borderLeft: `2px solid ${stemColor}40`,
+														}}
+													>
+														<div className="font-medium flex items-center gap-1.5">
+															<SlidersHorizontal className="h-3.5 w-3.5" />
+															<span className="transition-colors">MIDI Extraction Parameters</span>
 														</div>
+													</AccordionTrigger>
+													<AccordionContent className="pt-3 pb-3 px-3">
+														<div className="space-y-4">
+															{/* Parameters in 3 columns */}
+															<div className="grid grid-cols-3 gap-3">
+																{/* Onset Threshold */}
+																<div className="space-y-3">
+																	<div className="flex items-center gap-1">
+																		<Label className="text-xs">
+																			Onset: {formatPercentage(onsetThreshold)}
+																		</Label>
+																		<TooltipProvider>
+																			<Tooltip>
+																				<TooltipTrigger asChild>
+																					<div className="h-3.5 w-3.5 rounded-full bg-muted flex items-center justify-center text-[10px] cursor-help">
+																						i
+																					</div>
+																				</TooltipTrigger>
+																				<TooltipContent side="top" className="max-w-[180px]">
+																					Controls how sensitive the algorithm is to detecting new
+																					notes. Higher values require stronger onsets.
+																				</TooltipContent>
+																			</Tooltip>
+																		</TooltipProvider>
+																	</div>
+																	<Slider
+																		value={[onsetThreshold * 100]}
+																		min={10}
+																		max={90}
+																		step={5}
+																		onValueChange={(values) => setOnsetThreshold(values[0] / 100)}
+																		className="stem-colored-slider"
+																		style={
+																			{
+																				'--slider-range': stemColor,
+																				'--slider-thumb': stemColor,
+																			} as React.CSSProperties
+																		}
+																	/>
+																</div>
 
-														<Button
-															onClick={handleReprocessMidi}
-															className="w-full h-7 mt-1"
-															variant="outline"
-															size="sm"
-															style={{ borderColor: `${stemColor}40` }}
-														>
-															<RefreshCw className="h-3 w-3 mr-1.5" />
-															Re-extract MIDI
-														</Button>
-													</div>
-												</AccordionContent>
-											</AccordionItem>
-										</Accordion>
+																{/* Frame Threshold */}
+																<div className="space-y-3">
+																	<div className="flex items-center gap-1">
+																		<Label className="text-xs">
+																			Frame: {formatPercentage(frameThreshold)}
+																		</Label>
+																		<TooltipProvider>
+																			<Tooltip>
+																				<TooltipTrigger asChild>
+																					<div className="h-3.5 w-3.5 rounded-full bg-muted flex items-center justify-center text-[10px] cursor-help">
+																						i
+																					</div>
+																				</TooltipTrigger>
+																				<TooltipContent side="top" className="max-w-[180px]">
+																					Determines how loud a note needs to be to be detected.
+																					Higher values require louder notes.
+																				</TooltipContent>
+																			</Tooltip>
+																		</TooltipProvider>
+																	</div>
+																	<Slider
+																		value={[frameThreshold * 100]}
+																		min={10}
+																		max={90}
+																		step={5}
+																		onValueChange={(values) => setFrameThreshold(values[0] / 100)}
+																		className="stem-colored-slider"
+																		style={
+																			{
+																				'--slider-range': stemColor,
+																				'--slider-thumb': stemColor,
+																			} as React.CSSProperties
+																		}
+																	/>
+																</div>
 
-										<Separator className="my-4" />
+																{/* Min Note Length */}
+																<div className="space-y-3">
+																	<div className="flex items-center gap-1">
+																		<Label className="text-xs">Length: {minNoteLength}</Label>
+																		<TooltipProvider>
+																			<Tooltip>
+																				<TooltipTrigger asChild>
+																					<div className="h-3.5 w-3.5 rounded-full bg-muted flex items-center justify-center text-[10px] cursor-help">
+																						i
+																					</div>
+																				</TooltipTrigger>
+																				<TooltipContent side="top" className="max-w-[180px]">
+																					Filters out notes shorter than this threshold (in
+																					frames). Higher values remove more short notes.
+																				</TooltipContent>
+																			</Tooltip>
+																		</TooltipProvider>
+																	</div>
+																	<Slider
+																		value={[minNoteLength]}
+																		min={1}
+																		max={30}
+																		step={1}
+																		onValueChange={(values) => setMinNoteLength(values[0])}
+																		className="stem-colored-slider"
+																		style={
+																			{
+																				'--slider-range': stemColor,
+																				'--slider-thumb': stemColor,
+																			} as React.CSSProperties
+																		}
+																	/>
+																</div>
+															</div>
+
+															<Button
+																onClick={handleReprocessMidi}
+																className="w-full h-7 mt-3"
+																variant="outline"
+																size="sm"
+																style={{
+																	borderColor: `${stemColor}40`,
+																	backgroundColor: 'rgba(255,255,255,0.1)',
+																}}
+															>
+																<RefreshCw className="h-3 w-3 mr-1.5" />
+																Re-extract MIDI
+															</Button>
+														</div>
+													</AccordionContent>
+												</AccordionItem>
+											</Accordion>
+										</div>
+
+										<Separator className="mt-4 mb-5" />
 
 										{/* Playback controls only */}
 										<div className="flex items-center flex-wrap gap-4">
@@ -657,7 +673,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 													variant="outline"
 													size="icon"
 													onClick={resetPlayback}
-													className="rounded-full h-10 w-10 flex items-center justify-center text-muted-foreground"
+													className="rounded-full h-10 w-10 flex items-center justify-center "
 												>
 													<SkipBack className="h-5 w-5" />
 												</Button>
@@ -666,7 +682,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 													variant="outline"
 													size="icon"
 													onClick={togglePlayback}
-													className="rounded-full h-10 w-10 flex items-center justify-center"
+													className="rounded-full h-10 w-10 flex items-center justify-center hover:scale-105 hover:brightness-110 hover:shadow-md transition-all duration-200"
 													style={{
 														borderColor: `${stemColor}40`,
 														...(isPlaying
@@ -678,7 +694,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 																					stemColor.slice(3, 5),
 																					16
 																			  )}, ${parseInt(stemColor.slice(5, 7), 16)}, 0.25)`
-																			: stemColor.replace('rgb(', 'rgba(').replace(')', ', 0.75)')
+																			: stemColor.replace('rgb(', 'rgba(').replace(')', ', 0.9)')
 																	}`,
 																	color: 'white',
 															  }),
@@ -726,7 +742,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 																	variant="outline"
 																	size="icon"
 																	onClick={handleDownload}
-																	className="rounded-full h-10 w-10 flex items-center justify-center text-muted-foreground"
+																	className="rounded-full h-10 w-10 flex items-center justify-center"
 																>
 																	<Download className="h-5 w-5" />
 																</Button>

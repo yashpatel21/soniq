@@ -520,9 +520,10 @@ export function WaveformPlayer({
 						}
 						onMouseEnter={(e) => {
 							if (isPlaying) {
-								e.currentTarget.style.boxShadow = `0 0 0 2px rgba(${progressColor.match(/\d+/g)?.[0]},${
-									progressColor.match(/\d+/g)?.[1]
-								},${progressColor.match(/\d+/g)?.[2]},0.4)`
+								// Remove box-shadow and add scale effect for pause button
+								e.currentTarget.style.boxShadow = 'none'
+								e.currentTarget.style.transform = 'scale(1.05)'
+								e.currentTarget.style.filter = 'brightness(1.1)'
 							} else {
 								// No ring for play button, just enhance the background
 								e.currentTarget.style.boxShadow = 'none'
@@ -540,6 +541,8 @@ export function WaveformPlayer({
 						onMouseLeave={(e) => {
 							if (isPlaying) {
 								e.currentTarget.style.boxShadow = 'none'
+								e.currentTarget.style.transform = ''
+								e.currentTarget.style.filter = ''
 							} else {
 								e.currentTarget.style.boxShadow = ''
 								e.currentTarget.style.borderColor = `${progressColor}40`
