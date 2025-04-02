@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertTriangle, Music, Info } from 'lucide-react'
 import { AnalysisNavigation } from '@/components/AnalysisNavigation'
 import { MainHeader } from '@/components/MainHeader'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface AudioAnalysisData {
 	analysisResults?: {
@@ -47,12 +48,14 @@ export default function AnalysisPage() {
 	if (!sessionId) {
 		return (
 			<div className="fixed inset-0 flex items-center justify-center bg-background">
-				<Alert variant="destructive" className="max-w-md mx-auto">
-					<div className="flex gap-2 items-center">
-						<Info className="h-5 w-5" />
-						<AlertDescription>No session ID provided. You need to upload an audio file first.</AlertDescription>
-					</div>
-				</Alert>
+				<motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+					<Alert variant="destructive" className="max-w-md mx-auto">
+						<div className="flex gap-2 items-center">
+							<Info className="h-5 w-5" />
+							<AlertDescription>No session ID provided. You need to upload an audio file first.</AlertDescription>
+						</div>
+					</Alert>
+				</motion.div>
 			</div>
 		)
 	}
@@ -102,41 +105,76 @@ export default function AnalysisPage() {
 		}
 	}, [analysisQuery.data?.status, stemsQuery.data?.status, analysisQuery.refetch, stemsQuery.refetch])
 
+	const pageVariants = {
+		initial: { opacity: 0 },
+		enter: { opacity: 1, transition: { duration: 0.25 } },
+		exit: { opacity: 0, transition: { duration: 0.2 } },
+	}
+
+	const contentVariants = {
+		initial: { opacity: 0, y: 10 },
+		enter: { opacity: 1, y: 0, transition: { duration: 0.25, delay: 0.05 } },
+		exit: { opacity: 0, y: 10, transition: { duration: 0.15 } },
+	}
+
 	return (
-		<div className="min-h-screen bg-background">
+		<motion.div className="min-h-screen bg-background" initial="initial" animate="enter" exit="exit" variants={pageVariants}>
 			{/* Header */}
 			<MainHeader />
 
 			{/* Main content with navigation */}
 			<div className="flex">
 				{/* Navigation - Left Side */}
-				<nav className="fixed top-1/2 -translate-y-1/2 left-0 w-20 bg-background/95 backdrop-blur-md">
+				<motion.nav
+					className="fixed top-1/2 -translate-y-1/2 left-0 w-20 bg-background/95 backdrop-blur-md"
+					initial={{ x: -20, opacity: 0 }}
+					animate={{ x: 0, opacity: 1 }}
+					transition={{ duration: 0.25, delay: 0.1 }}
+				>
 					<AnalysisNavigation activeTab={activeTab} onTabChange={handleTabChange} orientation="side" />
-				</nav>
+				</motion.nav>
 
 				{/* Main content area */}
 				<main className="flex-1 ml-20">
-					<div className="px-8 md:px-16 lg:px-24 flex justify-center">
+					<motion.div className="px-8 md:px-16 lg:px-24 flex justify-center" variants={contentVariants}>
 						<div className="w-full max-w-7xl">
-							{activeTab === 'analysis' && (
-								<AudioAnalysisResults
-									analysisData={analysisQuery.data}
-									isLoading={analysisQuery.isLoading}
-									isError={analysisQuery.isError}
-								/>
-							)}
-							{activeTab === 'stems' && (
-								<StemsContainer
-									stemsData={stemsQuery.data}
-									isLoading={stemsQuery.isLoading}
-									isError={stemsQuery.isError}
-									sessionId={sessionId}
-								/>
-							)}
+							<AnimatePresence mode="wait">
+								{activeTab === 'analysis' && (
+									<motion.div
+										key="analysis"
+										initial={{ opacity: 0, x: -10 }}
+										animate={{ opacity: 1, x: 0 }}
+										exit={{ opacity: 0, x: 10 }}
+										transition={{ duration: 0.2 }}
+									>
+										<AudioAnalysisResults
+											analysisData={analysisQuery.data}
+											isLoading={analysisQuery.isLoading}
+											isError={analysisQuery.isError}
+										/>
+									</motion.div>
+								)}
+								{activeTab === 'stems' && (
+									<motion.div
+										key="stems"
+										initial={{ opacity: 0, x: 10 }}
+										animate={{ opacity: 1, x: 0 }}
+										exit={{ opacity: 0, x: -10 }}
+										transition={{ duration: 0.2 }}
+									>
+										<StemsContainer
+											stemsData={stemsQuery.data}
+											isLoading={stemsQuery.isLoading}
+											isError={stemsQuery.isError}
+											sessionId={sessionId}
+										/>
+									</motion.div>
+								)}
+							</AnimatePresence>
 						</div>
-					</div>
+					</motion.div>
 				</main>
 			</div>
-		</div>
+		</motion.div>
 	)
 }

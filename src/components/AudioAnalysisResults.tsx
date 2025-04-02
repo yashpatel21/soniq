@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Activity, Music2, AlertTriangle, Lightbulb, AudioWaveform } from 'lucide-react'
 import { cn } from '@/lib/utils/ui/utils'
 import { Badge } from '@/components/ui/badge'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface AudioAnalysisData {
 	analysisResults?: {
@@ -156,110 +157,188 @@ export function AudioAnalysisResults({ analysisData, isLoading, isError }: Audio
 	// Show skeletons if loading OR not completed yet (pending/processing)
 	const showSkeletons = isLoading || (analysisData && analysisData.status !== 'completed' && analysisData.status !== 'failed')
 
+	// Staggered animation for cards
+	const containerVariants = {
+		hidden: { opacity: 0 },
+		show: {
+			opacity: 1,
+			transition: {
+				staggerChildren: 0.06,
+			},
+		},
+	}
+
+	const itemVariants = {
+		hidden: { opacity: 0, y: 20 },
+		show: { opacity: 1, y: 0, transition: { duration: 0.25 } },
+	}
+
 	return (
 		<div className="h-full flex flex-col">
 			{/* Sticky header */}
-			<div className="sticky top-0 z-20 bg-background/95 backdrop-blur-md border-b border-border/40">
+			<motion.div
+				className="sticky top-0 z-20 bg-background/95 backdrop-blur-md border-b border-border/40"
+				initial={{ opacity: 0, y: -10 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.25 }}
+			>
 				<div className="py-8">
 					<div className="flex items-center gap-4 mb-3">
-						<div className="flex-shrink-0">
+						<motion.div
+							className="flex-shrink-0"
+							initial={{ scale: 0.8, opacity: 0 }}
+							animate={{ scale: 1, opacity: 1 }}
+							transition={{ duration: 0.2, delay: 0.1 }}
+						>
 							<AudioWaveform className="h-8 w-8 text-primary" />
-						</div>
-						<div>
+						</motion.div>
+						<motion.div
+							initial={{ opacity: 0, x: -10 }}
+							animate={{ opacity: 1, x: 0 }}
+							transition={{ duration: 0.25, delay: 0.15 }}
+						>
 							<h1 className="text-4xl font-bold tracking-tight">Musical Analysis</h1>
 							<p className="text-muted-foreground text-base leading-relaxed mt-2 max-w-2xl">
 								Discover the musical DNA of your track. Get precise BPM, key detection, and DJ-friendly insights to help you
 								mix and match tracks perfectly.
 							</p>
-						</div>
+						</motion.div>
 					</div>
 				</div>
-			</div>
+			</motion.div>
 
 			{/* Scrollable content */}
-			<div className="flex-1 overflow-auto">
+			<div className="flex-1 overflow-hidden">
 				{/* Loading state */}
-				{showSkeletons && (
-					<div className="p-3">
-						<div className="grid grid-cols-3 gap-4">
-							{[1, 2, 3].map((i) => (
-								<Card key={i} className="border border-border/40 bg-accent/30">
-									<CardContent className="p-4 flex flex-col items-center justify-center text-center">
-										<Skeleton className="h-10 w-10 rounded-full my-2" />
-										<div className="flex-1 flex flex-col items-center mt-1">
-											<Skeleton className="h-3 w-20 mb-2" />
-											<Skeleton className="h-6 w-16 mb-1" />
-											<Skeleton className="h-3 w-24 mt-1" />
-										</div>
-									</CardContent>
-								</Card>
-							))}
-						</div>
-					</div>
-				)}
+				<AnimatePresence>
+					{showSkeletons && (
+						<motion.div
+							className="p-3"
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							transition={{ duration: 0.2 }}
+						>
+							<div className="grid grid-cols-3 gap-4">
+								{[1, 2, 3].map((i) => (
+									<motion.div
+										key={i}
+										initial={{ opacity: 0, y: 15 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ duration: 0.25, delay: 0.05 * i }}
+										exit={{ opacity: 0, scale: 0.95 }}
+									>
+										<Card className="border border-border/40 bg-accent/30">
+											<CardContent className="p-4 flex flex-col items-center justify-center text-center">
+												<Skeleton className="h-10 w-10 rounded-full my-2" />
+												<div className="flex-1 flex flex-col items-center mt-1">
+													<Skeleton className="h-3 w-20 mb-2" />
+													<Skeleton className="h-6 w-16 mb-1" />
+													<Skeleton className="h-3 w-24 mt-1" />
+												</div>
+											</CardContent>
+										</Card>
+									</motion.div>
+								))}
+							</div>
+						</motion.div>
+					)}
+				</AnimatePresence>
 
 				{/* Error state */}
-				{isError && !showSkeletons && (
-					<div className="p-2.5">
-						<Alert variant="destructive" className="py-1.5">
-							<AlertTriangle className="h-4 w-4 mr-2" />
-							<AlertDescription>Error loading analysis data</AlertDescription>
-						</Alert>
-					</div>
-				)}
+				<AnimatePresence>
+					{isError && !showSkeletons && (
+						<motion.div
+							className="p-2.5"
+							initial={{ opacity: 0, y: 10 }}
+							animate={{ opacity: 1, y: 0 }}
+							exit={{ opacity: 0, y: -10 }}
+							transition={{ duration: 0.2 }}
+						>
+							<Alert variant="destructive" className="py-1.5">
+								<AlertTriangle className="h-4 w-4 mr-2" />
+								<AlertDescription>Error loading analysis data</AlertDescription>
+							</Alert>
+						</motion.div>
+					)}
+				</AnimatePresence>
 
 				{/* Failed state */}
-				{analysisData?.status === 'failed' && !showSkeletons && (
-					<div className="p-2.5">
-						<Alert variant="destructive">
-							<div className="flex items-center gap-2">
-								<AlertTriangle className="h-5 w-5 text-red-600" />
-								<div>
-									<p className="font-medium">Analysis failed</p>
-									<p className="text-xs">Please try uploading a different audio file.</p>
+				<AnimatePresence>
+					{analysisData?.status === 'failed' && !showSkeletons && (
+						<motion.div
+							className="p-2.5"
+							initial={{ opacity: 0, y: 10 }}
+							animate={{ opacity: 1, y: 0 }}
+							exit={{ opacity: 0, y: -10 }}
+							transition={{ duration: 0.2 }}
+						>
+							<Alert variant="destructive">
+								<div className="flex items-center gap-2">
+									<AlertTriangle className="h-5 w-5 text-red-600" />
+									<div>
+										<p className="font-medium">Analysis failed</p>
+										<p className="text-xs">Please try uploading a different audio file.</p>
+									</div>
 								</div>
-							</div>
-						</Alert>
-					</div>
-				)}
+							</Alert>
+						</motion.div>
+					)}
+				</AnimatePresence>
 
 				{/* Completed state with results */}
-				{analysisData?.status === 'completed' && analysisData.analysisResults && !isLoading && (
-					<div className="grid grid-cols-3 gap-4 p-3">
-						{/* Tempo card with animated ring */}
-						<AnalysisResult
-							icon={<Activity className="h-5 w-5 z-10 relative" />}
-							title="Tempo"
-							value={`${analysisData.analysisResults.bpm.toFixed(1)}`}
-							subValue="BPM"
-							iconBgClass="bg-primary/10 relative"
-							iconTextClass="text-primary"
-							ringClass="absolute inset-0 rounded-full border-2 border-primary/40 animate-tempo-ping"
-							dataTempoBpm={analysisData.analysisResults.bpm}
-						/>
+				<AnimatePresence>
+					{analysisData?.status === 'completed' && analysisData.analysisResults && !isLoading && (
+						<motion.div
+							className="grid grid-cols-3 gap-4 p-3"
+							variants={containerVariants}
+							initial="hidden"
+							animate="show"
+							exit={{ opacity: 0 }}
+						>
+							{/* Tempo card with animated ring */}
+							<motion.div variants={itemVariants}>
+								<AnalysisResult
+									icon={<Activity className="h-5 w-5 z-10 relative" />}
+									title="Tempo"
+									value={`${analysisData.analysisResults.bpm.toFixed(1)}`}
+									subValue="BPM"
+									iconBgClass="bg-primary/10 relative"
+									iconTextClass="text-primary"
+									ringClass="absolute inset-0 rounded-full border-2 border-primary/40 animate-tempo-ping"
+									dataTempoBpm={analysisData.analysisResults.bpm}
+								/>
+							</motion.div>
 
-						{/* Combined Key+Scale card */}
-						<AnalysisResult
-							icon={<Music2 className="h-5 w-5" />}
-							title="Key"
-							value={formatKeyScale(analysisData.analysisResults.key, analysisData.analysisResults.scale)}
-							subValue="Musical Key"
-							iconBgClass="bg-purple-100 dark:bg-purple-950/50"
-							iconTextClass="text-purple-600 dark:text-purple-400"
-						/>
+							{/* Combined Key+Scale card */}
+							<motion.div variants={itemVariants}>
+								<AnalysisResult
+									icon={<Music2 className="h-5 w-5" />}
+									title="Key"
+									value={formatKeyScale(analysisData.analysisResults.key, analysisData.analysisResults.scale)}
+									subValue="Musical Key"
+									iconBgClass="bg-purple-100 dark:bg-purple-950/50"
+									iconTextClass="text-purple-600 dark:text-purple-400"
+								/>
+							</motion.div>
 
-						{/* SonIQ Insights card */}
-						<Card className="border border-border/40 bg-accent/30">
-							<CardContent className="p-4 flex flex-col items-center justify-center text-center">
-								<div className="rounded-full p-2.5 flex-shrink-0 my-2 bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
-									<Lightbulb className="h-5 w-5" />
-								</div>
-								<span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">SonIQ Insights</span>
-								{renderDJInsightsContent(analysisData.analysisResults.key, analysisData.analysisResults.scale)}
-							</CardContent>
-						</Card>
-					</div>
-				)}
+							{/* SonIQ Insights card */}
+							<motion.div variants={itemVariants}>
+								<Card className="border border-border/40 bg-accent/30">
+									<CardContent className="p-4 flex flex-col items-center justify-center text-center">
+										<div className="rounded-full p-2.5 flex-shrink-0 my-2 bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
+											<Lightbulb className="h-5 w-5" />
+										</div>
+										<span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+											SonIQ Insights
+										</span>
+										{renderDJInsightsContent(analysisData.analysisResults.key, analysisData.analysisResults.scale)}
+									</CardContent>
+								</Card>
+							</motion.div>
+						</motion.div>
+					)}
+				</AnimatePresence>
 			</div>
 		</div>
 	)
@@ -310,11 +389,23 @@ function AnalysisResult({
 					{ringClass && <div className={ringClass}></div>}
 					{icon}
 				</div>
-				<div className="flex flex-col items-center mt-1">
+				<motion.div
+					className="flex flex-col items-center mt-1"
+					initial={{ opacity: 0 }}
+					animate={{ opacity: 1 }}
+					transition={{ duration: 0.3, delay: 0.1 }}
+				>
 					<span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{title}</span>
-					<span className="text-2xl font-bold leading-tight mt-1">{value}</span>
+					<motion.span
+						className="text-2xl font-bold leading-tight mt-1"
+						initial={{ opacity: 0, scale: 0.9 }}
+						animate={{ opacity: 1, scale: 1 }}
+						transition={{ duration: 0.3, delay: 0.2 }}
+					>
+						{value}
+					</motion.span>
 					<span className={cn('text-xs text-muted-foreground mt-1', hasLongText && 'max-w-[200px] text-center')}>{subValue}</span>
-				</div>
+				</motion.div>
 			</CardContent>
 		</Card>
 	)

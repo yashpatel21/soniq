@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { FileUpload } from '@/components/FileUpload'
 import { useDropzone } from 'react-dropzone'
+import { motion, AnimatePresence } from 'framer-motion'
 
 // Same constants as in home page
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB in bytes
@@ -128,30 +129,33 @@ export function AnalysisNavigation({ activeTab, onTabChange, orientation = 'side
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<div className="relative flex items-center">
-									<div
-										className={cn(
-											'absolute rounded-full transition-all duration-300',
-											isSide ? 'left-0 w-1.5 h-14' : 'top-0 h-1 w-14',
-											activeTab === 'analysis' ? 'bg-primary' : 'bg-muted/30'
-										)}
+									<motion.div
+										className={cn('absolute rounded-full', isSide ? 'left-0 w-1.5 h-14' : 'top-0 h-1 w-14')}
+										animate={{
+											backgroundColor: activeTab === 'analysis' ? 'var(--primary)' : 'var(--muted)',
+											opacity: activeTab === 'analysis' ? 1 : 0.3,
+										}}
+										transition={{ duration: 0.3 }}
 									/>
-									<Button
-										onClick={() => onTabChange('analysis')}
-										variant="ghost"
-										size="icon"
-										className={cn(
-											'relative w-14 h-14 rounded-xl transition-all duration-300',
-											isSide ? 'ml-4' : 'mt-2',
-											'group flex items-center justify-center',
-											activeTab === 'analysis'
-												? 'text-primary bg-primary/5 hover:bg-primary/10'
-												: 'text-muted-foreground hover:text-primary/80 hover:bg-accent/30',
-											'after:absolute after:inset-0 after:rounded-xl after:transition-all after:duration-300',
-											activeTab === 'analysis' && 'after:shadow-[0_0_15px_rgba(var(--primary),0.1)]'
-										)}
-									>
-										<AudioWaveform className="h-7 w-7" />
-									</Button>
+									<motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+										<Button
+											onClick={() => onTabChange('analysis')}
+											variant="ghost"
+											size="icon"
+											className={cn(
+												'relative w-14 h-14 rounded-xl transition-all duration-300',
+												isSide ? 'ml-4' : 'mt-2',
+												'group flex items-center justify-center',
+												activeTab === 'analysis'
+													? 'text-primary bg-primary/5 hover:bg-primary/10'
+													: 'text-muted-foreground hover:text-primary/80 hover:bg-accent/30',
+												'after:absolute after:inset-0 after:rounded-xl after:transition-all after:duration-300',
+												activeTab === 'analysis' && 'after:shadow-[0_0_15px_rgba(var(--primary),0.1)]'
+											)}
+										>
+											<AudioWaveform className="h-7 w-7" />
+										</Button>
+									</motion.div>
 								</div>
 							</TooltipTrigger>
 							<TooltipContent side={isSide ? 'right' : 'top'} sideOffset={5} align="center">
@@ -162,30 +166,33 @@ export function AnalysisNavigation({ activeTab, onTabChange, orientation = 'side
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<div className="relative flex items-center">
-									<div
-										className={cn(
-											'absolute rounded-full transition-all duration-300',
-											isSide ? 'left-0 w-1.5 h-14' : 'top-0 h-1 w-14',
-											activeTab === 'stems' ? 'bg-primary' : 'bg-muted/30'
-										)}
+									<motion.div
+										className={cn('absolute rounded-full', isSide ? 'left-0 w-1.5 h-14' : 'top-0 h-1 w-14')}
+										animate={{
+											backgroundColor: activeTab === 'stems' ? 'var(--primary)' : 'var(--muted)',
+											opacity: activeTab === 'stems' ? 1 : 0.3,
+										}}
+										transition={{ duration: 0.3 }}
 									/>
-									<Button
-										onClick={() => onTabChange('stems')}
-										variant="ghost"
-										size="icon"
-										className={cn(
-											'relative w-14 h-14 rounded-xl transition-all duration-300',
-											isSide ? 'ml-4' : 'mt-2',
-											'group flex items-center justify-center',
-											activeTab === 'stems'
-												? 'text-primary bg-primary/5 hover:bg-primary/10'
-												: 'text-muted-foreground hover:text-primary/80 hover:bg-accent/30',
-											'after:absolute after:inset-0 after:rounded-xl after:transition-all after:duration-300',
-											activeTab === 'stems' && 'after:shadow-[0_0_15px_rgba(var(--primary),0.1)]'
-										)}
-									>
-										<Scissors className="h-7 w-7" />
-									</Button>
+									<motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+										<Button
+											onClick={() => onTabChange('stems')}
+											variant="ghost"
+											size="icon"
+											className={cn(
+												'relative w-14 h-14 rounded-xl transition-all duration-300',
+												isSide ? 'ml-4' : 'mt-2',
+												'group flex items-center justify-center',
+												activeTab === 'stems'
+													? 'text-primary bg-primary/5 hover:bg-primary/10'
+													: 'text-muted-foreground hover:text-primary/80 hover:bg-accent/30',
+												'after:absolute after:inset-0 after:rounded-xl after:transition-all after:duration-300',
+												activeTab === 'stems' && 'after:shadow-[0_0_15px_rgba(var(--primary),0.1)]'
+											)}
+										>
+											<Scissors className="h-7 w-7" />
+										</Button>
+									</motion.div>
 								</div>
 							</TooltipTrigger>
 							<TooltipContent side={isSide ? 'right' : 'top'} sideOffset={5} align="center">
@@ -202,17 +209,19 @@ export function AnalysisNavigation({ activeTab, onTabChange, orientation = 'side
 							<Tooltip>
 								<TooltipTrigger asChild>
 									<div className="relative flex items-center">
-										<Button
-											onClick={() => setUploadDialogOpen(true)}
-											variant="ghost"
-											size="icon"
-											className={cn(
-												'relative w-14 h-14 rounded-xl ml-4 transition-all duration-300',
-												'text-muted-foreground hover:text-primary/80 hover:bg-accent/30'
-											)}
-										>
-											<Upload className="h-7 w-7" />
-										</Button>
+										<motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
+											<Button
+												onClick={() => setUploadDialogOpen(true)}
+												variant="ghost"
+												size="icon"
+												className={cn(
+													'relative w-14 h-14 rounded-xl ml-4 transition-all duration-300',
+													'text-muted-foreground hover:text-primary/80 hover:bg-accent/30'
+												)}
+											>
+												<Upload className="h-7 w-7" />
+											</Button>
+										</motion.div>
 									</div>
 								</TooltipTrigger>
 								<TooltipContent side="right" sideOffset={5} align="center">
@@ -224,26 +233,28 @@ export function AnalysisNavigation({ activeTab, onTabChange, orientation = 'side
 				)}
 
 				{/* Upload Dialog */}
-				<Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-					<DialogContent className="sm:max-w-md p-0 rounded-xl bg-background/60 backdrop-blur-sm border-border/60">
-						<div className="bg-accent/30 p-6 rounded-xl">
-							<div className="flex items-start gap-3 mb-4">
-								<div className="min-w-10 min-h-10 w-10 h-10 rounded-full flex items-center justify-center bg-primary/10 text-primary shrink-0">
-									<AudioWaveform size={20} strokeWidth={2} className="h-5 w-5" />
+				{uploadDialogOpen && (
+					<Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+						<DialogContent className="sm:max-w-md p-0 rounded-xl bg-background/60 backdrop-blur-sm border-border/60">
+							<div className="bg-accent/30 p-6 rounded-xl">
+								<div className="flex items-start gap-3 mb-4">
+									<div className="min-w-10 min-h-10 w-10 h-10 rounded-full flex items-center justify-center bg-primary/10 text-primary shrink-0">
+										<AudioWaveform size={20} strokeWidth={2} className="h-5 w-5" />
+									</div>
+									<DialogHeader className="text-left">
+										<DialogTitle className="text-lg font-medium">New Analysis</DialogTitle>
+										<DialogDescription className="text-sm text-muted-foreground">
+											Upload another audio file to analyze and separate it into stems.
+										</DialogDescription>
+									</DialogHeader>
 								</div>
-								<DialogHeader className="text-left">
-									<DialogTitle className="text-lg font-medium">New Analysis</DialogTitle>
-									<DialogDescription className="text-sm text-muted-foreground">
-										Upload another audio file to analyze and separate it into stems.
-									</DialogDescription>
-								</DialogHeader>
+								<div className="w-full">
+									<FileUpload pageIsDragging={isDragging} onExternalDrop={handleExternalDrop} />
+								</div>
 							</div>
-							<div className="w-full">
-								<FileUpload pageIsDragging={isDragging} onExternalDrop={handleExternalDrop} />
-							</div>
-						</div>
-					</DialogContent>
-				</Dialog>
+						</DialogContent>
+					</Dialog>
+				)}
 			</div>
 		</>
 	)

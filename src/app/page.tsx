@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Wand2, Scissors, FileMusic, AudioWaveform } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { WavyBackground } from '@/components/ui/wavy-background'
+import { motion } from 'framer-motion'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB in bytes
 const ACCEPTED_FILE_TYPES = {
@@ -113,64 +114,117 @@ export default function Home() {
 				<main className="absolute inset-0 flex items-center justify-center pointer-events-none">
 					<div className="container max-w-6xl px-6 md:px-8 lg:px-10 flex flex-col lg:flex-row items-start gap-10 lg:gap-16 pointer-events-auto">
 						{/* Left side - text content */}
-						<div className="flex-1 space-y-8 flex flex-col justify-between">
+						<motion.div
+							className="flex-1 space-y-8 flex flex-col justify-between"
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.5, ease: 'easeOut' }}
+						>
 							<div className="space-y-5">
-								<Badge variant="secondary" className="px-3 py-1 text-xs rounded-full">
-									AI-Powered Audio Analysis
-								</Badge>
-								<h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]">
+								<motion.div
+									initial={{ opacity: 0, y: 10 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ duration: 0.3, delay: 0.2 }}
+								>
+									<Badge variant="secondary" className="px-3 py-1 text-xs rounded-full">
+										AI-Powered Audio Analysis
+									</Badge>
+								</motion.div>
+								<motion.h1
+									className="text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]"
+									initial={{ opacity: 0, y: 10 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ duration: 0.4, delay: 0.3 }}
+								>
 									Elevate Your{' '}
 									<span className="text-primary relative inline-block">
 										<span className="animate-gradient-text">Sound</span>
 									</span>
-								</h1>
-								<p className="text-xl text-muted-foreground font-light max-w-xl">
+								</motion.h1>
+								<motion.p
+									className="text-xl text-muted-foreground font-light max-w-xl"
+									initial={{ opacity: 0, y: 10 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ duration: 0.4, delay: 0.4 }}
+								>
 									Intelligent analysis and stem separation for music producers and DJs.
-								</p>
+								</motion.p>
 							</div>
 
-							<div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mt-11">
-								<div className="flex flex-col gap-1.5 group">
-									<div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
-										<Wand2 className="h-5 w-5" />
-									</div>
-									<h3 className="font-medium">Audio Analysis</h3>
-									<p className="text-sm text-muted-foreground">BPM, key detection, and DJ insights</p>
-								</div>
-
-								<div className="flex flex-col gap-1.5 group">
-									<div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
-										<Scissors className="h-5 w-5" />
-									</div>
-									<h3 className="font-medium">Stem Separation</h3>
-									<p className="text-sm text-muted-foreground">Isolate vocals, drums, bass and get high-quality stems</p>
-								</div>
-
-								<div className="flex flex-col gap-1.5 group">
-									<div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
-										<FileMusic className="h-5 w-5" />
-									</div>
-									<h3 className="font-medium">MIDI Extraction</h3>
-									<p className="text-sm text-muted-foreground">Convert stems to MIDI notes for your DAW projects</p>
-								</div>
-							</div>
-						</div>
+							<motion.div
+								className="grid grid-cols-1 sm:grid-cols-3 gap-5 mt-11"
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.5, delay: 0.5 }}
+							>
+								{[
+									{
+										icon: <Wand2 className="h-5 w-5" />,
+										title: 'Audio Analysis',
+										description: 'BPM, key detection, and DJ insights',
+									},
+									{
+										icon: <Scissors className="h-5 w-5" />,
+										title: 'Stem Separation',
+										description: 'Isolate vocals, drums, bass and get high-quality stems',
+									},
+									{
+										icon: <FileMusic className="h-5 w-5" />,
+										title: 'MIDI Extraction',
+										description: 'Convert stems to MIDI notes for your DAW projects',
+									},
+								].map((feature, index) => (
+									<motion.div
+										key={index}
+										className="flex flex-col gap-1.5 group"
+										initial={{ opacity: 0, y: 15 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ duration: 0.4, delay: 0.6 + index * 0.1 }}
+										whileHover={{ y: -5 }}
+									>
+										<div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
+											{feature.icon}
+										</div>
+										<h3 className="font-medium">{feature.title}</h3>
+										<p className="text-sm text-muted-foreground">{feature.description}</p>
+									</motion.div>
+								))}
+							</motion.div>
+						</motion.div>
 
 						{/* Right side - file upload */}
-						<div className="w-full lg:w-[450px] self-start mt-6 relative z-50 bg-background/60 rounded-xl">
+						<motion.div
+							className="w-full lg:w-[450px] self-start mt-6 relative z-50 bg-background/60 rounded-xl"
+							initial={{ opacity: 0, scale: 0.95, x: 20 }}
+							animate={{ opacity: 1, scale: 1, x: 0 }}
+							transition={{
+								duration: 0.5,
+								delay: 0.4,
+								ease: [0.19, 1.0, 0.22, 1.0],
+							}}
+						>
 							<Card className="bg-accent/30 border-border/40 w-full">
 								<CardContent className="px-6 pt-4 pb-3">
 									<div className="mb-3">
 										<div className="flex items-start gap-3 mb-1">
-											<div className="min-w-10 min-h-10 w-10 h-10 rounded-full flex items-center justify-center bg-primary/10 text-primary shrink-0">
+											<motion.div
+												className="min-w-10 min-h-10 w-10 h-10 rounded-full flex items-center justify-center bg-primary/10 text-primary shrink-0"
+												initial={{ scale: 0.8, opacity: 0 }}
+												animate={{ scale: 1, opacity: 1 }}
+												transition={{ duration: 0.3, delay: 0.7 }}
+											>
 												<AudioWaveform size={20} strokeWidth={2} className="h-5 w-5" />
-											</div>
-											<div>
+											</motion.div>
+											<motion.div
+												initial={{ opacity: 0, x: -10 }}
+												animate={{ opacity: 1, x: 0 }}
+												transition={{ duration: 0.3, delay: 0.8 }}
+											>
 												<h2 className="text-lg font-medium">Get Started</h2>
 												<p className="text-sm text-muted-foreground">
 													Upload your audio file to analyze and separate it into stems.
 												</p>
-											</div>
+											</motion.div>
 										</div>
 									</div>
 									<div ref={fileUploadRef} className="w-full">
@@ -178,7 +232,7 @@ export default function Home() {
 									</div>
 								</CardContent>
 							</Card>
-						</div>
+						</motion.div>
 					</div>
 				</main>
 			</div>
