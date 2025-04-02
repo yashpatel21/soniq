@@ -157,20 +157,10 @@ export function AudioAnalysisResults({ analysisData, isLoading, isError }: Audio
 	// Show skeletons if loading OR not completed yet (pending/processing)
 	const showSkeletons = isLoading || (analysisData && analysisData.status !== 'completed' && analysisData.status !== 'failed')
 
-	// Staggered animation for cards
-	const containerVariants = {
+	// Animation constants
+	const fadeInVariants = {
 		hidden: { opacity: 0 },
-		show: {
-			opacity: 1,
-			transition: {
-				staggerChildren: 0.06,
-			},
-		},
-	}
-
-	const itemVariants = {
-		hidden: { opacity: 0, y: 20 },
-		show: { opacity: 1, y: 0, transition: { duration: 0.25 } },
+		visible: { opacity: 1, transition: { duration: 0.3 } },
 	}
 
 	return (
@@ -208,42 +198,83 @@ export function AudioAnalysisResults({ analysisData, isLoading, isError }: Audio
 			</motion.div>
 
 			{/* Scrollable content */}
-			<div className="flex-1 overflow-hidden">
-				{/* Loading state */}
-				<AnimatePresence>
+			<div className="flex-1 overflow-hidden relative">
+				{/* Results Container - shared grid layout for both skeletons and results */}
+				<div className="grid grid-cols-3 gap-4 p-3">
+					{/* Skeletons - show when loading */}
 					{showSkeletons && (
-						<motion.div
-							className="p-3"
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
-							transition={{ duration: 0.2 }}
-						>
-							<div className="grid grid-cols-3 gap-4">
-								{[1, 2, 3].map((i) => (
-									<motion.div
-										key={i}
-										initial={{ opacity: 0, y: 15 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{ duration: 0.25, delay: 0.05 * i }}
-										exit={{ opacity: 0, scale: 0.95 }}
-									>
-										<Card className="border border-border/40 bg-accent/30">
-											<CardContent className="p-4 flex flex-col items-center justify-center text-center">
-												<Skeleton className="h-10 w-10 rounded-full my-2" />
-												<div className="flex-1 flex flex-col items-center mt-1">
-													<Skeleton className="h-3 w-20 mb-2" />
-													<Skeleton className="h-6 w-16 mb-1" />
-													<Skeleton className="h-3 w-24 mt-1" />
-												</div>
-											</CardContent>
-										</Card>
-									</motion.div>
-								))}
-							</div>
-						</motion.div>
+						<>
+							{[1, 2, 3].map((i) => (
+								<motion.div
+									key={`skeleton-${i}`}
+									initial={{ opacity: 0 }}
+									animate={{ opacity: 1 }}
+									exit={{ opacity: 0 }}
+									transition={{ duration: 0.2, delay: i * 0.05 }}
+								>
+									<Card className="border border-border/40 bg-accent/30 h-full">
+										<CardContent className="p-4 flex flex-col items-center justify-between text-center h-full">
+											<Skeleton className="h-10 w-10 rounded-full my-2" />
+											<div className="flex-1 flex flex-col items-center justify-center mt-1">
+												<Skeleton className="h-3 w-20 mb-2" />
+												<Skeleton className="h-6 w-16 mb-1" />
+												<Skeleton className="h-3 w-24 mt-1" />
+											</div>
+											{/* Add a spacer div to ensure consistent height with result cards */}
+											<div className="h-[60px]"></div>
+										</CardContent>
+									</Card>
+								</motion.div>
+							))}
+						</>
 					)}
-				</AnimatePresence>
+
+					{/* Analysis Results - only show when loaded and not showing skeletons */}
+					{analysisData?.status === 'completed' && analysisData.analysisResults && !showSkeletons && (
+						<>
+							{/* Tempo card with animated ring */}
+							<motion.div variants={fadeInVariants} initial="hidden" animate="visible" transition={{ delay: 0 }}>
+								<AnalysisResult
+									icon={<Activity className="h-5 w-5 z-10 relative" />}
+									title="Tempo"
+									value={`${analysisData.analysisResults.bpm.toFixed(1)}`}
+									subValue="BPM"
+									iconBgClass="bg-primary/10 relative"
+									iconTextClass="text-primary"
+									ringClass="absolute inset-0 rounded-full border-2 border-primary/40 animate-tempo-ping"
+									dataTempoBpm={analysisData.analysisResults.bpm}
+								/>
+							</motion.div>
+
+							{/* Combined Key+Scale card */}
+							<motion.div variants={fadeInVariants} initial="hidden" animate="visible" transition={{ delay: 0.05 }}>
+								<AnalysisResult
+									icon={<Music2 className="h-5 w-5" />}
+									title="Key"
+									value={formatKeyScale(analysisData.analysisResults.key, analysisData.analysisResults.scale)}
+									subValue="Musical Key"
+									iconBgClass="bg-purple-100 dark:bg-purple-950/50"
+									iconTextClass="text-purple-600 dark:text-purple-400"
+								/>
+							</motion.div>
+
+							{/* SonIQ Insights card */}
+							<motion.div variants={fadeInVariants} initial="hidden" animate="visible" transition={{ delay: 0.1 }}>
+								<Card className="border border-border/40 bg-accent/30 h-full">
+									<CardContent className="p-4 flex flex-col items-center justify-center text-center h-full">
+										<div className="rounded-full p-2.5 flex-shrink-0 my-2 bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
+											<Lightbulb className="h-5 w-5" />
+										</div>
+										<span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+											SonIQ Insights
+										</span>
+										{renderDJInsightsContent(analysisData.analysisResults.key, analysisData.analysisResults.scale)}
+									</CardContent>
+								</Card>
+							</motion.div>
+						</>
+					)}
+				</div>
 
 				{/* Error state */}
 				<AnimatePresence>
@@ -285,60 +316,6 @@ export function AudioAnalysisResults({ analysisData, isLoading, isError }: Audio
 						</motion.div>
 					)}
 				</AnimatePresence>
-
-				{/* Completed state with results */}
-				<AnimatePresence>
-					{analysisData?.status === 'completed' && analysisData.analysisResults && !isLoading && (
-						<motion.div
-							className="grid grid-cols-3 gap-4 p-3"
-							variants={containerVariants}
-							initial="hidden"
-							animate="show"
-							exit={{ opacity: 0 }}
-						>
-							{/* Tempo card with animated ring */}
-							<motion.div variants={itemVariants}>
-								<AnalysisResult
-									icon={<Activity className="h-5 w-5 z-10 relative" />}
-									title="Tempo"
-									value={`${analysisData.analysisResults.bpm.toFixed(1)}`}
-									subValue="BPM"
-									iconBgClass="bg-primary/10 relative"
-									iconTextClass="text-primary"
-									ringClass="absolute inset-0 rounded-full border-2 border-primary/40 animate-tempo-ping"
-									dataTempoBpm={analysisData.analysisResults.bpm}
-								/>
-							</motion.div>
-
-							{/* Combined Key+Scale card */}
-							<motion.div variants={itemVariants}>
-								<AnalysisResult
-									icon={<Music2 className="h-5 w-5" />}
-									title="Key"
-									value={formatKeyScale(analysisData.analysisResults.key, analysisData.analysisResults.scale)}
-									subValue="Musical Key"
-									iconBgClass="bg-purple-100 dark:bg-purple-950/50"
-									iconTextClass="text-purple-600 dark:text-purple-400"
-								/>
-							</motion.div>
-
-							{/* SonIQ Insights card */}
-							<motion.div variants={itemVariants}>
-								<Card className="border border-border/40 bg-accent/30">
-									<CardContent className="p-4 flex flex-col items-center justify-center text-center">
-										<div className="rounded-full p-2.5 flex-shrink-0 my-2 bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
-											<Lightbulb className="h-5 w-5" />
-										</div>
-										<span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-											SonIQ Insights
-										</span>
-										{renderDJInsightsContent(analysisData.analysisResults.key, analysisData.analysisResults.scale)}
-									</CardContent>
-								</Card>
-							</motion.div>
-						</motion.div>
-					)}
-				</AnimatePresence>
 			</div>
 		</div>
 	)
@@ -377,8 +354,8 @@ function AnalysisResult({
 	}
 
 	return (
-		<Card className="border border-border/40 bg-accent/30">
-			<CardContent className="p-4 flex flex-col items-center justify-center text-center">
+		<Card className="border border-border/40 bg-accent/30 h-full">
+			<CardContent className="p-4 flex flex-col items-center justify-between text-center h-full">
 				<div
 					className={cn('rounded-full p-2.5 flex-shrink-0 my-2', iconBgClass, iconTextClass)}
 					style={{
@@ -390,7 +367,7 @@ function AnalysisResult({
 					{icon}
 				</div>
 				<motion.div
-					className="flex flex-col items-center mt-1"
+					className="flex flex-col items-center mt-1 flex-1 justify-center"
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					transition={{ duration: 0.3, delay: 0.1 }}
@@ -406,6 +383,8 @@ function AnalysisResult({
 					</motion.span>
 					<span className={cn('text-xs text-muted-foreground mt-1', hasLongText && 'max-w-[200px] text-center')}>{subValue}</span>
 				</motion.div>
+				{/* Add a spacer div to ensure consistent height */}
+				<div className="h-[60px]"></div>
 			</CardContent>
 		</Card>
 	)
