@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { AudioAnalysisResults } from '@/components/AudioAnalysisResults'
@@ -27,11 +27,13 @@ interface StemsData {
 	status: 'pending' | 'processing' | 'completed' | 'failed'
 }
 
-export default function AnalysisPage() {
+// Component that uses useSearchParams wrapped in Suspense boundary
+function AnalysisContent() {
 	const router = useRouter()
 	const searchParams = useSearchParams()
 	const sessionId = searchParams.get('sessionId')
 	const tabParam = searchParams.get('tab')
+
 	const [activeTab, setActiveTab] = React.useState(tabParam === 'stems' ? 'stems' : 'analysis')
 
 	// Handler to update both state and URL when tab changes
@@ -176,5 +178,23 @@ export default function AnalysisPage() {
 				</main>
 			</div>
 		</motion.div>
+	)
+}
+
+// Main page component with Suspense boundary
+export default function AnalysisPage() {
+	return (
+		<Suspense
+			fallback={
+				<div className="min-h-screen bg-background flex items-center justify-center">
+					<div className="text-center">
+						<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+						<p className="text-muted-foreground">Loading analysis page...</p>
+					</div>
+				</div>
+			}
+		>
+			<AnalysisContent />
+		</Suspense>
 	)
 }
