@@ -1,6 +1,6 @@
 {
 	"name": "soniq",
-	"version": "0.9.3",
+	"version": "0.9.4",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -8,7 +8,8 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
-		"setup-db": "node scripts/setup-db.js"
+		"setup-db": "node scripts/setup-db.js",
+		"postinstall": "patch-package"
 	},
 	"dependencies": {
 		"@radix-ui/react-accordion": "^1.2.3",
@@ -57,6 +58,7 @@
 		"@types/react-dom": "^19",
 		"@types/uuid": "^10.0.0",
 		"next-transpile-modules": "^10.0.1",
+		"patch-package": "^8.0.0",
 		"tailwindcss": "^4",
 		"typescript": "^5"
 	},
