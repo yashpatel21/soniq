@@ -571,7 +571,6 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 									<div className="p-4 pt-2 pb-0 flex-shrink-0">
 										{/* MIDI extraction parameters */}
 										<div className="w-full mb-4 mt-1">
-											{/* Custom accordion implementation */}
 											<Accordion type="single" collapsible className="w-full">
 												<AccordionItem
 													value="extraction-params"
@@ -726,13 +725,6 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 													</AccordionContent>
 												</AccordionItem>
 											</Accordion>
-
-											{/* Style for the accent border */}
-											<style jsx>{`
-												div[data-state='open'] .accordion-accent-border {
-													opacity: 1;
-												}
-											`}</style>
 										</div>
 
 										<Separator className="mt-4 mb-5" />

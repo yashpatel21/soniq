@@ -707,9 +707,26 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '', st
 		midiObject.tracks.forEach((track, trackIndex) => {
 			if (!track.notes || track.notes.length === 0) return
 
-			// Use the stem color for the main track, fallback to alternate colors for additional tracks
-			const trackColor = trackIndex === 0 ? addOpacity(stemColor, 0.8) : trackColors[trackIndex % trackColors.length]
-			const trackBorderColor = trackIndex === 0 ? stemColor : trackColor.replace('0.8', '1')
+			// Base track color without opacity (we'll apply opacity per note based on velocity)
+			let baseTrackColor: string
+			if (trackIndex === 0) {
+				// For the main track, use the provided stem color
+				baseTrackColor = stemColor
+			} else {
+				// For other tracks, extract the RGB values from the rgba color string
+				const colorString = trackColors[trackIndex % trackColors.length]
+				const rgbaMatch = colorString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/)
+
+				if (rgbaMatch) {
+					// If we successfully extracted RGB values, create an RGB color string
+					baseTrackColor = `rgb(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]})`
+				} else {
+					// Fallback to a default color if the regex didn't match
+					baseTrackColor = `rgb(128, 128, 128)`
+				}
+			}
+
+			const trackBorderColor = trackIndex === 0 ? stemColor : trackColors[trackIndex % trackColors.length].replace('0.8', '1')
 
 			// Process each note
 			track.notes.forEach((note, noteIndex) => {
@@ -723,13 +740,20 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '', st
 				const width = Math.max(note.duration * PIXELS_PER_SECOND, 2) // Ensure minimum width
 				const y = visiblePianoRollHeight - (note.midi - visibleMinPitch + 1) * NOTE_HEIGHT
 
+				// Get velocity from note (normalized 0-1) and map to opacity range (0.3-1.0)
+				const velocity = typeof note.velocity === 'number' ? note.velocity : 0.8 // Default if not present
+				const opacity = 0.3 + velocity * 0.7 // Map 0-1 to 0.3-1.0
+
+				// Apply velocity-based opacity to note color
+				const noteColor = addOpacity(baseTrackColor, opacity)
+
 				result.push({
 					id: `${trackIndex}-${noteIndex}`,
 					x,
 					y,
 					width,
 					height: NOTE_HEIGHT,
-					color: trackColor,
+					color: noteColor,
 					borderColor: trackBorderColor,
 					pitch: note.midi,
 					time: note.time,

@@ -212,3 +212,8 @@
 .animate-tempo-ping {
 	animation: tempo-ping var(--tempo-duration, 0.5s) cubic-bezier(0, 0, 0.2, 1) infinite;
 }
+
+/* Accordion border styling */
+[data-slot='accordion-item'][data-state='open'] .accordion-accent-border {
+	opacity: 1 !important;
+}
