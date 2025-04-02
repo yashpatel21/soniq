@@ -11,7 +11,7 @@ import { Download, FileMusic, Pause, Play, SkipBack, Volume, Volume1, Volume2, V
 import { formatTime } from '@/lib/utils/ui/utils'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { extractMidiFromAudioBuffer, createDownloadableMidiFromAudioBuffer } from '@/lib/utils/midi/midiExtraction'
+import { createDownloadableMidiFromAudioBuffer } from '@/lib/utils/midi/midiExtraction'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'

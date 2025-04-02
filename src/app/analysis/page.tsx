@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { AudioAnalysisResults } from '@/components/AudioAnalysisResults'
 import { StemsContainer } from '@/components/StemsContainer'
@@ -27,9 +27,21 @@ interface StemsData {
 }
 
 export default function AnalysisPage() {
+	const router = useRouter()
 	const searchParams = useSearchParams()
 	const sessionId = searchParams.get('sessionId')
-	const [activeTab, setActiveTab] = React.useState('analysis')
+	const tabParam = searchParams.get('tab')
+	const [activeTab, setActiveTab] = React.useState(tabParam === 'stems' ? 'stems' : 'analysis')
+
+	// Handler to update both state and URL when tab changes
+	const handleTabChange = (tab: string) => {
+		setActiveTab(tab)
+
+		// Update URL with new tab parameter while preserving sessionId
+		const params = new URLSearchParams(searchParams.toString())
+		params.set('tab', tab)
+		router.push(`/analysis?${params.toString()}`)
+	}
 
 	// If there's no sessionId, show an error
 	if (!sessionId) {
@@ -99,7 +111,7 @@ export default function AnalysisPage() {
 			<div className="flex">
 				{/* Navigation - Left Side */}
 				<nav className="fixed top-1/2 -translate-y-1/2 left-0 w-20 bg-background/95 backdrop-blur-md">
-					<AnalysisNavigation activeTab={activeTab} onTabChange={setActiveTab} orientation="side" />
+					<AnalysisNavigation activeTab={activeTab} onTabChange={handleTabChange} orientation="side" />
 				</nav>
 
 				{/* Main content area */}
