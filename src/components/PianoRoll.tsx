@@ -125,13 +125,13 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '', st
 
 	// Process MIDI data on mount/change
 	useEffect(() => {
-		console.log('Processing MIDI data')
+		// console.log('Processing MIDI data')
 		processMidiData()
 	}, [midiObject])
 
 	// Initialize container dimensions
 	useEffect(() => {
-		console.log('PianoRoll component mounted, initializing dimensions...')
+		// console.log('PianoRoll component mounted, initializing dimensions...')
 
 		// Set initial container width
 		if (containerRef.current) {
@@ -157,7 +157,7 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '', st
 	// Reset scroll position when currentTime is 0
 	useEffect(() => {
 		if (currentTime === 0) {
-			console.log('Resetting horizontal scroll position to beginning')
+			// console.log('Resetting horizontal scroll position to beginning')
 			updateHorizontalScrollPosition(0)
 		}
 	}, [currentTime])
@@ -165,7 +165,7 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '', st
 	// Process MIDI data to extract metadata
 	const processMidiData = () => {
 		if (!midiObject || !midiObject.tracks || midiObject.tracks.length === 0) {
-			console.log('No valid MIDI data, using default range')
+			// console.log('No valid MIDI data, using default range')
 
 			// Set default range centered around middle C
 			const defaultMinPitch = 48 // C3
@@ -190,7 +190,7 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '', st
 			return
 		}
 
-		console.log(`Processing MIDI data with ${midiObject.tracks.length} tracks`)
+		// console.log(`Processing MIDI data with ${midiObject.tracks.length} tracks`)
 
 		// Calculate duration from the last note end time
 		const maxDuration = Math.max(
@@ -222,15 +222,15 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '', st
 			})
 		})
 
-		console.log(
-			`Found MIDI note range: ${lowestPitch} (${pitchToNoteName(lowestPitch)}) to ${highestPitch} (${pitchToNoteName(highestPitch)})`
-		)
+		// console.log(
+		// 	`Found MIDI note range: ${lowestPitch} (${pitchToNoteName(lowestPitch)}) to ${highestPitch} (${pitchToNoteName(highestPitch)})`
+		// )
 
 		// If no valid notes, use a default range
 		if (totalNotes === 0 || lowestPitch > highestPitch) {
 			lowestPitch = 48 // C3
 			highestPitch = 84 // C6
-			console.log(`No valid notes found, using default range: ${lowestPitch}-${highestPitch}`)
+			// console.log(`No valid notes found, using default range: ${lowestPitch}-${highestPitch}`)
 		}
 
 		// Add padding around the note range
@@ -261,9 +261,9 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '', st
 			// This is the number of notes beyond the visible range
 			maxScrollTop = actualNoteRange - VISIBLE_NOTE_RANGE
 
-			console.log(
-				`Setting up vertical scroll: total range ${minPitch}-${maxPitch} (${actualNoteRange} notes), initial visible range ${visibleMinPitch}-${visibleMaxPitch}`
-			)
+			// console.log(
+			// 	`Setting up vertical scroll: total range ${minPitch}-${maxPitch} (${actualNoteRange} notes), initial visible range ${visibleMinPitch}-${visibleMaxPitch}`
+			// )
 
 			setMidiMetadata({
 				duration,
@@ -324,11 +324,11 @@ export function PianoRoll({ midiObject, currentTime, playing, className = '', st
 
 			const pianoRollHeight = VISIBLE_NOTE_RANGE * NOTE_HEIGHT
 
-			console.log(
-				`Fixed display range: ${minPitch} (${pitchToNoteName(minPitch)}) to ${maxPitch} (${pitchToNoteName(maxPitch)}) - ${
-					maxPitch - minPitch + 1
-				} notes`
-			)
+			// console.log(
+			// 	`Fixed display range: ${minPitch} (${pitchToNoteName(minPitch)}) to ${maxPitch} (${pitchToNoteName(maxPitch)}) - ${
+			// 		maxPitch - minPitch + 1
+			// 	} notes`
+			// )
 
 			setMidiMetadata({
 				duration,

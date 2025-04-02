@@ -22,7 +22,7 @@ export async function initializeBasicPitch(): Promise<BasicPitch> {
 		return basicPitchInstance!
 	}
 
-	console.log('Initializing BasicPitch...')
+	// console.log('Initializing BasicPitch...')
 	isModelLoading = true
 
 	try {
@@ -30,7 +30,7 @@ export async function initializeBasicPitch(): Promise<BasicPitch> {
 		modelLoadPromise = (async () => {
 			// Load BasicPitch with local model URL
 			basicPitchInstance = new BasicPitch(LOCAL_MODEL_URL)
-			console.log('BasicPitch instance created successfully')
+			// console.log('BasicPitch instance created successfully')
 		})()
 
 		await modelLoadPromise
@@ -77,9 +77,9 @@ export async function extractMidiFromAudioBuffer(
 		addPitchBendsToNoteEvents(contours, outputToNotesPoly(frames, onsets, onsetThreshold, frameThreshold, minNoteLength))
 	)
 
-	console.log(
-		`MIDI extraction complete, extracted ${notes.length} notes with parameters: onsetThreshold=${onsetThreshold}, frameThreshold=${frameThreshold}, minNoteLength=${minNoteLength}`
-	)
+	// console.log(
+	// 	`MIDI extraction complete, extracted ${notes.length} notes with parameters: onsetThreshold=${onsetThreshold}, frameThreshold=${frameThreshold}, minNoteLength=${minNoteLength}`
+	// )
 
 	// Create MIDI file using Tone.js/MIDI
 	const midi = new Midi()

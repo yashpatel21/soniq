@@ -80,7 +80,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 			return
 		}
 
-		console.log('MidiDialog opened')
+		// console.log('MidiDialog opened')
 		audioBufferRef.current = audioBuffer
 
 		// Reset playback state
@@ -91,7 +91,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 
 		// Reset extraction parameters to defaults if this is a new opening (not a re-render)
 		if (!prevOpenRef.current) {
-			console.log('Resetting extraction parameters to defaults')
+			// console.log('Resetting extraction parameters to defaults')
 			// Reset to default values
 			setOnsetThreshold(DEFAULT_ONSET_THRESHOLD)
 			setFrameThreshold(DEFAULT_FRAME_THRESHOLD)
@@ -156,11 +156,11 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 					release: 1,
 					baseUrl: 'https://tonejs.github.io/audio/salamander/',
 					onload: () => {
-						console.log('Piano sampler loaded successfully')
+						// console.log('Piano sampler loaded successfully')
 					},
 				}).toDestination()
 
-				console.log('Initialized Piano Sampler')
+				// console.log('Initialized Piano Sampler')
 			}
 
 			// Set initial volume
@@ -171,7 +171,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 			// Process audio buffer to extract MIDI if available
 			if (audioBufferRef.current) {
 				try {
-					console.log(`Extracting MIDI with parameters: onset=${onset}, frame=${frame}, minLength=${minLength}`)
+					// console.log(`Extracting MIDI with parameters: onset=${onset}, frame=${frame}, minLength=${minLength}`)
 					const { url, filename, midiObject } = await createDownloadableMidiFromAudioBuffer(
 						audioBufferRef.current,
 						stemName,
@@ -194,7 +194,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 						console.warn('Extraction completed but no MIDI notes were detected')
 						toast.warning('No MIDI notes detected. Try adjusting the parameters.')
 					} else {
-						console.log(`MIDI extraction successful with ${totalNotes} notes`)
+						// console.log(`MIDI extraction successful with ${totalNotes} notes`)
 					}
 
 					setDownloadUrl(url)
@@ -212,7 +212,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 						)
 
 						setDuration(Math.max(calculatedDuration, 1))
-						console.log(`MIDI duration: ${calculatedDuration} seconds`)
+						// console.log(`MIDI duration: ${calculatedDuration} seconds`)
 					}
 
 					// Mark as ready
@@ -237,7 +237,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 	useEffect(() => {
 		if (synth.current) {
 			synth.current.volume.value = isMuted ? -Infinity : Tone.gainToDb(volume)
-			console.log(`Volume updated: ${isMuted ? 'muted' : volume}`)
+			// console.log(`Volume updated: ${isMuted ? 'muted' : volume}`)
 		}
 	}, [volume, isMuted])
 
@@ -274,7 +274,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 		try {
 			// Try to start audio context
 			await Tone.start()
-			console.log('Tone.js audio context started')
+			// console.log('Tone.js audio context started')
 
 			// Make sure the audio is unmuted
 			if (isMuted) {
@@ -306,7 +306,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 
 			// Start the part/sequence
 			part.current.start(0)
-			console.log(`Starting playback at time ${currentTime}`)
+			// console.log(`Starting playback at time ${currentTime}`)
 
 			// Start transport
 			Tone.Transport.start()
@@ -325,7 +325,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 						stopPlayback()
 						// Explicitly reset the currentTime to 0 which will trigger the scroll reset
 						setCurrentTime(0)
-						console.log('Playback completed, resetting to beginning')
+						// console.log('Playback completed, resetting to beginning')
 					}
 				}
 			}, 100)
@@ -375,7 +375,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 			}
 		}
 
-		console.log('Playback stopped and all resources cleaned up')
+		// console.log('Playback stopped and all resources cleaned up')
 	}
 
 	// Create MIDI events for playback
@@ -422,7 +422,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 			return
 		}
 
-		console.log(`Processed ${noteCount} MIDI notes for playback`)
+		// console.log(`Processed ${noteCount} MIDI notes for playback`)
 
 		// Sort events by time
 		events.sort((a, b) => a[0] - b[0])
@@ -436,7 +436,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 			}
 
 			// Trigger note with explicit parameters
-			console.log(`Playing note ${value.note} at ${time} for ${value.duration}s with velocity ${value.velocity}`)
+			// console.log(`Playing note ${value.note} at ${time} for ${value.duration}s with velocity ${value.velocity}`)
 			try {
 				synth.current.triggerAttackRelease(value.note, value.duration, time, value.velocity)
 			} catch (e) {
@@ -462,7 +462,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 
 	// Reset playback to beginning
 	const resetPlayback = () => {
-		console.log('Resetting playback to beginning')
+		// console.log('Resetting playback to beginning')
 
 		// Stop playback first
 		stopPlayback()
@@ -481,7 +481,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 		setTimeout(() => {
 			// This will trigger a re-render of the piano roll
 			// The timeout helps ensure state updates have completed
-			console.log('Forced piano roll redraw after reset')
+			// console.log('Forced piano roll redraw after reset')
 		}, 50)
 	}
 

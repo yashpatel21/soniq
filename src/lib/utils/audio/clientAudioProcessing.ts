@@ -21,7 +21,7 @@ export async function convertToMonoAndResample(wavesurfer: WaveSurfer): Promise<
 	const targetSampleRate = 22050
 
 	// Log original properties
-	console.log(`Original audio: ${originalChannels} channels at ${originalSampleRate}Hz`)
+	// console.log(`Original audio: ${originalChannels} channels at ${originalSampleRate}Hz`)
 
 	// Calculate the new length after resampling
 	const duration = originalBuffer.duration
@@ -52,7 +52,7 @@ export async function convertToMonoAndResample(wavesurfer: WaveSurfer): Promise<
 		const monoResampledBuffer = await offlineContext.startRendering()
 
 		// Log processed properties
-		console.log(`Processed audio: ${monoResampledBuffer.numberOfChannels} channel at ${monoResampledBuffer.sampleRate}Hz`)
+		// console.log(`Processed audio: ${monoResampledBuffer.numberOfChannels} channel at ${monoResampledBuffer.sampleRate}Hz`)
 
 		// Verify that conversion worked as expected
 		if (monoResampledBuffer.numberOfChannels !== 1) {
