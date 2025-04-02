@@ -365,7 +365,6 @@ export function WaveformPlayer({
 
 		try {
 			setIsExtractingMidi(true)
-			toast.info(`Preparing audio for MIDI extraction...`)
 
 			// Convert audio to mono and resample to 22050Hz
 			const processedBuffer = await convertToMonoAndResample(wavesurferRef.current)
