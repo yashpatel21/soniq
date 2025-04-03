@@ -1,6 +1,6 @@
 {
 	"name": "soniq",
-	"version": "0.9.4",
+	"version": "0.9.5",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -64,6 +64,7 @@
 	},
 	"overrides": {
 		"glob": "^10.3.10",
-		"inflight": "npm:lru-cache@^10.0.0"
+		"inflight": "npm:lru-cache@^10.0.0",
+		"rimraf": "^4.0.0"
 	}
 }
