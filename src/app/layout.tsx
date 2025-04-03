@@ -18,6 +18,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
 	title: 'SonIQ - AI-powered Audio Analysis',
 	description: 'Advanced audio analysis and stem separation tool',
+	icons: {
+		icon: [
+			// SVG favicon with theme-aware primary color
+			{ url: '/favicon.svg', type: 'image/svg+xml' },
+			// ICO version for better compatibility with older browsers
+			{ url: '/favicon.ico', type: 'image/x-icon' },
+		],
+	},
 }
 
 export default function RootLayout({

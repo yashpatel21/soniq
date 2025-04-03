@@ -5,8 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { FileUpload } from '@/components/FileUpload'
-import { useDropzone } from 'react-dropzone'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 
 // Same constants as in home page
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB in bytes

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import * as Tone from 'tone'
 import { Midi } from '@tonejs/midi'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { PianoRoll } from '@/components/PianoRoll'

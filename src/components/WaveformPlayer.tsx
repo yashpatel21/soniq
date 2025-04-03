@@ -8,10 +8,8 @@ import { formatTime } from '@/lib/utils/ui/utils'
 import { cn } from '@/lib/utils/ui/utils'
 import { toast } from 'sonner'
 import WaveSurfer from 'wavesurfer.js'
-import { createDownloadableMidiFromAudioBuffer } from '@/lib/utils/midi/midiExtraction'
 import { convertToMonoAndResample } from '@/lib/utils/audio/clientAudioProcessing'
 import { MidiDialog } from '@/components/MidiDialog'
-import { Midi } from '@tonejs/midi'
 
 // Use a safe version of useLayoutEffect that falls back to useEffect in SSR
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
