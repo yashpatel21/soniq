@@ -133,13 +133,36 @@ export function AudioAnalysisResults({ analysisData, isLoading, isError }: Audio
 		const compatibleKeys = getCompatibleKeys(key, scale)
 
 		return (
-			<div className="w-full flex flex-col items-center gap-1">
-				<span className="text-2xl font-bold leading-tight mt-1">{camelotCode}</span>
+			<motion.div
+				className="w-full flex flex-col items-center gap-1"
+				initial={{ opacity: 0 }}
+				animate={{ opacity: 1 }}
+				transition={{ duration: 0.3, delay: 0.1 }}
+			>
+				<motion.span
+					className="text-2xl font-bold leading-tight mt-1"
+					initial={{ opacity: 0, scale: 0.9 }}
+					animate={{ opacity: 1, scale: 1 }}
+					transition={{ duration: 0.3, delay: 0.2 }}
+				>
+					{camelotCode}
+				</motion.span>
 				<span className="text-xs text-muted-foreground mb-2">Camelot Code</span>
 
-				<div className="w-full flex flex-row flex-wrap justify-center gap-2 mt-1">
+				<motion.div
+					className="w-full flex flex-row flex-wrap justify-center gap-2 mt-1"
+					initial={{ opacity: 0, y: 5 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.3, delay: 0.3 }}
+				>
 					{compatibleKeys.map((ck, index) => (
-						<div key={index} className="flex items-center gap-1">
+						<motion.div
+							key={index}
+							className="flex items-center gap-1"
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							transition={{ duration: 0.2, delay: 0.4 + index * 0.05 }}
+						>
 							<Badge
 								variant="outline"
 								className="bg-amber-100/30 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/30"
@@ -147,10 +170,10 @@ export function AudioAnalysisResults({ analysisData, isLoading, isError }: Audio
 								{ck.code}
 							</Badge>
 							<span className="text-xs">{ck.name}</span>
-						</div>
+						</motion.div>
 					))}
-				</div>
-			</div>
+				</motion.div>
+			</motion.div>
 		)
 	}
 
