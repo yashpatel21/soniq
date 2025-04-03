@@ -142,9 +142,6 @@ The application uses MongoDB to store:
 # Install dependencies
 npm install
 
-# Set up database
-npm run setup-db
-
 # Run development server
 npm run dev
 ```

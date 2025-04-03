@@ -1,6 +1,6 @@
 {
 	"name": "soniq",
-	"version": "0.9.5",
+	"version": "0.9.6",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -9,7 +9,7 @@
 		"start": "next start",
 		"lint": "next lint",
 		"setup-db": "node scripts/setup-db.js",
-		"postinstall": "patch-package"
+		"postinstall": "patch-package && npm run setup-db"
 	},
 	"dependencies": {
 		"@radix-ui/react-accordion": "^1.2.3",
