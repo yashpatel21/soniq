@@ -29,6 +29,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils/ui/utils'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { MIDI_DIALOG_OPENED_EVENT, createMidiDialogOpenedEvent } from '@/lib/utils/audio/audioEvents'
 
 interface MidiDialogProps {
 	open: boolean
@@ -65,6 +66,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 
 	// Track previous open state to detect when dialog opens
 	const prevOpenRef = useRef(false)
+	const hasDispatchedEventRef = useRef(false)
 
 	// Refs
 	const synth = useRef<Tone.Sampler | null>(null)
@@ -72,6 +74,24 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 	const startTime = useRef<number>(0)
 	const updateInterval = useRef<NodeJS.Timeout | null>(null)
 	const audioBufferRef = useRef<AudioBuffer | null>(null)
+
+	// Detect dialog open state changes and dispatch event when it opens
+	useEffect(() => {
+		if (open && !hasDispatchedEventRef.current) {
+			// Broadcast event to pause all stem players when dialog opens
+			window.dispatchEvent(
+				createMidiDialogOpenedEvent({
+					stemName: stemName,
+					sourceId: 'midi-dialog',
+				})
+			)
+			console.log('MIDI dialog opened, dispatched pause event')
+			hasDispatchedEventRef.current = true
+		} else if (!open) {
+			// Reset the flag when dialog closes
+			hasDispatchedEventRef.current = false
+		}
+	}, [open, stemName])
 
 	// Initialize when dialog opens
 	useEffect(() => {

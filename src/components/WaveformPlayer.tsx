@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import WaveSurfer from 'wavesurfer.js'
 import { convertToMonoAndResample } from '@/lib/utils/audio/clientAudioProcessing'
 import { MidiDialog } from '@/components/MidiDialog'
+import { MIDI_DIALOG_OPENED_EVENT, MidiDialogEventDetail, createMidiDialogOpenedEvent } from '@/lib/utils/audio/audioEvents'
 
 // Use a safe version of useLayoutEffect that falls back to useEffect in SSR
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
@@ -84,6 +85,34 @@ export function WaveformPlayer({
 		}
 	}, [])
 
+	// Set up event listener to pause when any MIDI dialog opens
+	useEffect(() => {
+		// Handler for pausing playback when a MIDI dialog opens
+		const handleMidiDialogOpened = (event: Event) => {
+			// Cast to custom event type
+			const customEvent = event as CustomEvent<MidiDialogEventDetail>
+			const eventDetail = customEvent.detail
+
+			// Only pause if we are playing and this event wasn't from this component
+			if (isPlaying && wavesurferRef.current) {
+				// Don't log if this is our own stem
+				if (eventDetail.stemName !== stemName) {
+					console.log(`Pausing ${stemName} because MIDI dialog opened for ${eventDetail.stemName}`)
+				}
+				wavesurferRef.current.pause()
+				// Note: The 'pause' event will update isPlaying state
+			}
+		}
+
+		// Add event listener
+		window.addEventListener(MIDI_DIALOG_OPENED_EVENT, handleMidiDialogOpened)
+
+		// Clean up event listener
+		return () => {
+			window.removeEventListener(MIDI_DIALOG_OPENED_EVENT, handleMidiDialogOpened)
+		}
+	}, [isPlaying, stemName])
+
 	// Initialize WaveSurfer once container is ready
 	useEffect(() => {
 		// Exit early if server-side rendering, container not ready, or containerReady not set
@@ -108,10 +137,66 @@ export function WaveformPlayer({
 				cursorColor: 'rgba(255, 255, 255, 0.5)',
 				normalize: true,
 				sampleRate: 44100, // Use standard CD-quality sample rate
+				// Settings to improve visualization without user interaction
+				backend: 'MediaElement',
+				autoplay: false,
 			})
 
 			// Save reference
 			wavesurferRef.current = ws
+
+			// Add universal AudioContext handling for first user interaction
+			const resumeAudioContext = () => {
+				if (!ws || isCleanedUpRef.current) return
+
+				try {
+					// For WaveSurfer v7, try to access audio context
+					if (ws.getMediaElement) {
+						const audioElement = ws.getMediaElement()
+						// Cast to any since the context property is added by WaveSurfer but not in HTMLMediaElement type
+						const audioElementWithContext = audioElement as any
+						if (audioElementWithContext?.context && audioElementWithContext.context.state === 'suspended') {
+							audioElementWithContext.context.resume().catch((error: Error) => {
+								console.warn('Could not resume AudioContext:', error)
+							})
+						}
+					}
+				} catch (e) {
+					console.warn('Error accessing AudioContext:', e)
+				}
+			}
+
+			// Add global listener for first user interaction
+			const handleFirstInteraction = () => {
+				resumeAudioContext()
+				// Remove listeners after first interaction
+				;['click', 'touchstart', 'keydown'].forEach((eventType: string) => {
+					document.removeEventListener(eventType, handleFirstInteraction)
+				})
+			}
+
+			// Add listeners to handle first user interaction
+			;['click', 'touchstart', 'keydown'].forEach((eventType: string) => {
+				document.addEventListener(eventType, handleFirstInteraction, { once: true })
+			})
+
+			// Handle waveform decoded event - force refreshing
+			ws.on('decode', () => {
+				if (isCleanedUpRef.current) return
+
+				try {
+					// After decode, force a refresh of the waveform
+					setTimeout(() => {
+						if (ws && !isCleanedUpRef.current) {
+							// In v7, waveform should render automatically
+							// If needed, we could use setOptions to force a re-render
+							ws.setOptions({ waveColor })
+						}
+					}, 50)
+				} catch (e) {
+					console.warn(`Could not force waveform display for ${stemName}:`, e)
+				}
+			})
 
 			// Set up event listeners
 			ws.on('ready', () => {
@@ -126,6 +211,14 @@ export function WaveformPlayer({
 					console.error('Error setting initial volume:', e)
 				}
 
+				// Run a second refresh to ensure visualization is visible
+				try {
+					// In v7, force a re-render by setting options
+					ws.setOptions({ waveColor, progressColor })
+				} catch (e) {
+					console.warn(`Secondary refresh failed for ${stemName}:`, e)
+				}
+
 				// Enable clicking on waveform to play from that position
 				ws.on('click', () => {
 					if (isCleanedUpRef.current) return
@@ -133,6 +226,8 @@ export function WaveformPlayer({
 					// If not playing, start playback
 					if (!ws.isPlaying()) {
 						try {
+							// Try to resume AudioContext before playing
+							resumeAudioContext()
 							ws.play()
 						} catch (e) {
 							console.error('Error starting playback after waveform click:', e)
@@ -153,6 +248,14 @@ export function WaveformPlayer({
 
 			ws.on('error', (err) => {
 				if (isCleanedUpRef.current) return
+
+				const errorStr = String(err)
+
+				// Don't treat AudioContext errors as fatal
+				if (errorStr.includes('AudioContext') || errorStr.includes('user aborted') || errorStr.includes('play()')) {
+					console.warn(`Non-critical audio error for ${stemName}:`, errorStr)
+					return
+				}
 
 				// Ignore AbortError when it's related to volume changes
 				if (err.name === 'AbortError' && err.message.includes('user aborted')) {
@@ -175,6 +278,18 @@ export function WaveformPlayer({
 			// Load audio
 			try {
 				ws.load(stemUrl)
+
+				// Add a fallback to ensure waveform always appears
+				const displayTimeout = setTimeout(() => {
+					if (!isCleanedUpRef.current && ws) {
+						try {
+							// In v7, force a re-render by setting options
+							ws.setOptions({ waveColor, progressColor })
+						} catch (e) {
+							console.warn(`Fallback waveform refresh failed for ${stemName}:`, e)
+						}
+					}
+				}, 2000)
 			} catch (err) {
 				console.error(`Error loading audio for ${stemName}:`, err)
 				if (!isCleanedUpRef.current) {
@@ -192,6 +307,12 @@ export function WaveformPlayer({
 		return () => {
 			// Mark as cleaned up to prevent state updates
 			isCleanedUpRef.current = true
+
+			// Remove document-level event listeners
+			const handleFirstInteraction = () => {} // Empty function for TypeScript
+			;['click', 'touchstart', 'keydown'].forEach((eventType: string) => {
+				document.removeEventListener(eventType, handleFirstInteraction)
+			})
 
 			// Clear time update interval
 			if (timeUpdateIntervalRef.current) {
@@ -215,6 +336,24 @@ export function WaveformPlayer({
 			}
 		}
 	}, [stemName, stemUrl, waveColor, progressColor, containerReady])
+
+	// Handle MIDI dialog open/close
+	useEffect(() => {
+		if (midiDialogOpen) {
+			// Pause this player if it's playing
+			if (isPlaying && wavesurferRef.current) {
+				wavesurferRef.current.pause()
+			}
+
+			// Dispatch event to pause all other players
+			window.dispatchEvent(
+				createMidiDialogOpenedEvent({
+					stemName,
+					sourceId: sessionId,
+				})
+			)
+		}
+	}, [midiDialogOpen, isPlaying, stemName, sessionId])
 
 	// Maintain a reference to the current volume and mute state
 	const volumeRef = useRef(volume)
@@ -250,14 +389,46 @@ export function WaveformPlayer({
 		return () => clearTimeout(debounceTimeout)
 	}, [volume, isMuted, isReady])
 
-	// Handle play/pause
+	// Handle play/pause with AudioContext resuming
 	const togglePlayPause = () => {
 		if (!wavesurferRef.current || !isReady || isCleanedUpRef.current) return
 
 		try {
-			wavesurferRef.current.playPause()
+			// Try to resume AudioContext before playing
+			if (wavesurferRef.current.getMediaElement) {
+				const audioElement = wavesurferRef.current.getMediaElement()
+				// Cast to any since the context property is added by WaveSurfer but not in HTMLMediaElement type
+				const audioElementWithContext = audioElement as any
+				if (audioElementWithContext?.context && audioElementWithContext.context.state === 'suspended') {
+					audioElementWithContext.context
+						.resume()
+						.then(() => {
+							if (wavesurferRef.current) {
+								wavesurferRef.current.playPause()
+							}
+						})
+						.catch((error: Error) => {
+							// Try playback anyway if resume fails
+							if (wavesurferRef.current) {
+								wavesurferRef.current.playPause()
+							}
+						})
+				} else {
+					wavesurferRef.current.playPause()
+				}
+			} else {
+				wavesurferRef.current.playPause()
+			}
 		} catch (e) {
 			console.error('Error toggling playback:', e)
+			// Try direct playback as fallback
+			try {
+				if (wavesurferRef.current) {
+					wavesurferRef.current.playPause()
+				}
+			} catch (innerE) {
+				console.error('Final playback attempt failed:', innerE)
+			}
 		}
 	}
 
@@ -287,6 +458,29 @@ export function WaveformPlayer({
 		} catch (e) {
 			console.error('Error toggling mute:', e)
 			// Don't set error state for mute toggle
+		}
+	}
+
+	// Handle MIDI extraction - also broadcasts MIDI dialog opened event
+	const handleMidiExtraction = async () => {
+		if (isExtractingMidi || !wavesurferRef.current || !isReady) return
+
+		try {
+			setIsExtractingMidi(true)
+
+			// Convert audio to mono and resample to 22050Hz
+			const processedBuffer = await convertToMonoAndResample(wavesurferRef.current)
+
+			// Store the processed audio buffer
+			setProcessedAudioBuffer(processedBuffer)
+
+			// Open the MIDI dialog
+			setMidiDialogOpen(true)
+		} catch (e) {
+			console.error('Error processing audio for MIDI extraction:', e)
+			toast.error(e instanceof Error ? e.message : 'Failed to process audio')
+		} finally {
+			setIsExtractingMidi(false)
 		}
 	}
 
@@ -354,29 +548,6 @@ export function WaveformPlayer({
 		} catch (e) {
 			console.error('Error downloading file:', e)
 			toast.error('Failed to download audio file')
-		}
-	}
-
-	// Handle MIDI extraction
-	const handleMidiExtraction = async () => {
-		if (isExtractingMidi || !wavesurferRef.current || !isReady) return
-
-		try {
-			setIsExtractingMidi(true)
-
-			// Convert audio to mono and resample to 22050Hz
-			const processedBuffer = await convertToMonoAndResample(wavesurferRef.current)
-
-			// Store the processed audio buffer
-			setProcessedAudioBuffer(processedBuffer)
-
-			// Open the MIDI dialog
-			setMidiDialogOpen(true)
-		} catch (e) {
-			console.error('Error processing audio for MIDI extraction:', e)
-			toast.error(e instanceof Error ? e.message : 'Failed to process audio')
-		} finally {
-			setIsExtractingMidi(false)
 		}
 	}
 
