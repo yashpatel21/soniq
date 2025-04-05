@@ -6,9 +6,10 @@ interface StemPlayerProps {
 	stemUrl: string
 	sessionId: string
 	stemColor?: string
+	onReady?: () => void
 }
 
-export function StemPlayer({ stemName, stemUrl, sessionId, stemColor }: StemPlayerProps) {
+export function StemPlayer({ stemName, stemUrl, sessionId, stemColor, onReady }: StemPlayerProps) {
 	// Get stem color based on stem name
 	const getColorForStem = () => {
 		if (stemColor) return stemColor
@@ -36,6 +37,7 @@ export function StemPlayer({ stemName, stemUrl, sessionId, stemColor }: StemPlay
 				waveColor="rgb(148, 163, 184)"
 				progressColor={progressColor}
 				className="transform transition-all duration-300 hover:scale-[1.005] hover:shadow-md active:scale-[0.995]"
+				onReady={onReady}
 			/>
 		</div>
 	)

@@ -22,6 +22,7 @@ interface WaveformPlayerProps {
 	waveColor?: string
 	progressColor?: string
 	className?: string
+	onReady?: () => void
 }
 
 export function WaveformPlayer({
@@ -31,6 +32,7 @@ export function WaveformPlayer({
 	waveColor = 'rgb(148, 163, 184)',
 	progressColor = 'rgb(79, 70, 229)',
 	className = '',
+	onReady,
 }: WaveformPlayerProps) {
 	// Essential state
 	const [isPlaying, setIsPlaying] = useState(false)
@@ -93,12 +95,8 @@ export function WaveformPlayer({
 			const customEvent = event as CustomEvent<MidiDialogEventDetail>
 			const eventDetail = customEvent.detail
 
-			// Only pause if we are playing and this event wasn't from this component
+			// Pause this player if it's playing
 			if (isPlaying && wavesurferRef.current) {
-				// Don't log if this is our own stem
-				if (eventDetail.stemName !== stemName) {
-					console.log(`Pausing ${stemName} because MIDI dialog opened for ${eventDetail.stemName}`)
-				}
 				wavesurferRef.current.pause()
 				// Note: The 'pause' event will update isPlaying state
 			}
@@ -215,8 +213,23 @@ export function WaveformPlayer({
 				try {
 					// In v7, force a re-render by setting options
 					ws.setOptions({ waveColor, progressColor })
+
+					// Call onReady callback when the waveform is ready
+					if (onReady) {
+						// Add a small delay to ensure waveform is visible
+						setTimeout(() => {
+							if (!isCleanedUpRef.current && onReady) {
+								onReady()
+							}
+						}, 200)
+					}
 				} catch (e) {
 					console.warn(`Secondary refresh failed for ${stemName}:`, e)
+
+					// Call onReady even if there was an error
+					if (onReady && !isCleanedUpRef.current) {
+						setTimeout(() => onReady(), 200)
+					}
 				}
 
 				// Enable clicking on waveform to play from that position

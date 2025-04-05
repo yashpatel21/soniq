@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { StemPlayer } from './StemPlayer'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -7,6 +7,7 @@ import { Scissors, Music } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { StemsProcessingVisualization } from './StemsProcessingVisualization'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface StemsData {
 	stems?: {
@@ -24,6 +25,12 @@ interface StemsContainerProps {
 
 export function StemsContainer({ stemsData, isLoading, isError, sessionId }: StemsContainerProps) {
 	const [activeFilter, setActiveFilter] = useState<string | null>(null)
+	const [waveformsReady, setWaveformsReady] = useState(false)
+	const [initialLoadStarted, setInitialLoadStarted] = useState(false)
+	const readyWaveformsCountRef = useRef(0)
+	const totalWaveformsRef = useRef(0)
+	const [previousStatus, setPreviousStatus] = useState<string | undefined>(undefined)
+	const [isTransitioning, setIsTransitioning] = useState(false)
 
 	// Get the stems data if available
 	const stemItems = stemsData?.stems ? Object.entries(stemsData.stems) : []
@@ -55,7 +62,62 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 		return Array.from(types)
 	}, [stemItems])
 
-	// Animation variants
+	// Track status changes to detect transitions
+	React.useEffect(() => {
+		if (stemsData?.status && stemsData.status !== previousStatus) {
+			setPreviousStatus(stemsData.status)
+		}
+	}, [stemsData?.status, previousStatus])
+
+	// Track loading of all waveforms
+	React.useEffect(() => {
+		if (stemsData?.status === 'completed' && stemItems.length > 0 && !initialLoadStarted) {
+			setInitialLoadStarted(true)
+
+			// Reset counters
+			readyWaveformsCountRef.current = 0
+			totalWaveformsRef.current = stemItems.length
+
+			// Start a timer to ensure we eventually display the waveforms even if some fail to load
+			const fallbackTimer = setTimeout(() => {
+				setWaveformsReady(true)
+			}, 5000)
+
+			return () => clearTimeout(fallbackTimer)
+		}
+	}, [stemsData?.status, stemItems.length, initialLoadStarted])
+
+	// Function to handle when a waveform is ready
+	const handleWaveformReady = () => {
+		readyWaveformsCountRef.current += 1
+
+		// Check if all waveforms are ready
+		if (readyWaveformsCountRef.current >= totalWaveformsRef.current) {
+			// Small delay to ensure all waveforms are actually visible
+			setTimeout(() => {
+				setWaveformsReady(true)
+			}, 400) // Slightly longer delay for smoother transition
+		}
+	}
+
+	// Handle filter change with transition locking
+	const handleFilterChange = (filter: string | null) => {
+		// Block multiple rapid changes while transitioning
+		if (isTransitioning) return
+
+		// Mark as transitioning
+		setIsTransitioning(true)
+
+		// Set the filter
+		setActiveFilter(filter)
+
+		// Clear transition lock after animation completes
+		setTimeout(() => {
+			setIsTransitioning(false)
+		}, 400)
+	}
+
+	// Animation variants with opacity-only transitions (no vertical movement)
 	const containerVariants = {
 		hidden: { opacity: 0 },
 		visible: {
@@ -75,9 +137,9 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 	}
 
 	const itemVariants = {
-		hidden: { opacity: 0, y: 20 },
-		visible: { opacity: 1, y: 0, transition: { duration: 0.25 } },
-		exit: { opacity: 0, y: -10, transition: { duration: 0.15 } },
+		hidden: { opacity: 0 },
+		visible: { opacity: 1, transition: { duration: 0.25 } },
+		exit: { opacity: 0, transition: { duration: 0.15 } },
 	}
 
 	// Show error message
@@ -155,13 +217,14 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 
 			{/* Filter row */}
 			<AnimatePresence>
-				{stemTypes.length > 0 && (
+				{stemTypes.length > 0 && waveformsReady && (
 					<motion.div
 						className="sticky top-[102px] z-20 bg-background/95 backdrop-blur-md border-b border-border/40"
 						initial={{ opacity: 0, y: -10 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: -10 }}
-						transition={{ duration: 0.2 }}
+						transition={{ duration: 0.25, delay: 0.1 }}
+						key="filter-row"
 					>
 						<div className="flex items-center justify-between px-2.5 py-3">
 							<div className="flex items-center gap-1 flex-wrap">
@@ -170,7 +233,8 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 										size="sm"
 										variant={!activeFilter ? 'secondary' : 'outline'}
 										className="h-7 px-2 text-xs rounded-sm"
-										onClick={() => setActiveFilter(null)}
+										onClick={() => handleFilterChange(null)}
+										disabled={isTransitioning}
 									>
 										All
 									</Button>
@@ -181,7 +245,8 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 											size="sm"
 											variant={activeFilter === type ? 'secondary' : 'outline'}
 											className="h-7 px-2 text-xs rounded-sm"
-											onClick={() => setActiveFilter(activeFilter === type ? null : type)}
+											onClick={() => handleFilterChange(activeFilter === type ? null : type)}
+											disabled={isTransitioning}
 										>
 											{type}
 										</Button>
@@ -194,7 +259,7 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 								<motion.div
 									initial={{ opacity: 0, scale: 0.9 }}
 									animate={{ opacity: 1, scale: 1 }}
-									transition={{ duration: 0.2, delay: 0.25 }}
+									transition={{ duration: 0.3, delay: 0.25 }}
 								>
 									<Badge
 										variant="outline"
@@ -210,81 +275,88 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 				)}
 			</AnimatePresence>
 
-			{/* Content */}
-			<div className="flex-1 overflow-hidden">
-				{/* Show blank skeleton for initial loading */}
-				{!stemsData && (
-					<motion.div
-						className="flex-1 flex items-center justify-center"
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						transition={{ duration: 0.2 }}
-					>
-						<div className="h-[300px] w-full rounded-lg border border-border/40 animate-pulse bg-accent/30" />
-					</motion.div>
-				)}
-
-				{/* Show processing visualization when we have data and it's processing */}
-				<AnimatePresence>
-					{stemsData?.status === 'processing' && (
+			{/* Content - Using overflow-hidden during transitions to prevent scrollbar flash */}
+			<div className={`flex-1 ${isTransitioning ? 'overflow-hidden' : 'overflow-auto'}`}>
+				{/* Three possible states to show, all mutually exclusive:
+					1. Processing visualization with animated beams (when stems are being processed)
+					2. Processing visualization with spinner (when stems are complete but waveforms loading)
+					3. Waveform players (when everything is ready)
+					4. Error state (if processing failed)
+				*/}
+				<AnimatePresence mode="wait">
+					{/* 1 & 2. Processing/Loading visualization states */}
+					{(!stemsData || stemsData?.status === 'processing' || (stemsData?.status === 'completed' && !waveformsReady)) && (
 						<motion.div
 							className="flex-1 p-3 pb-8"
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							exit={{ opacity: 0, y: -20 }}
-							transition={{ duration: 0.25 }}
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							transition={{ duration: 0.3 }}
+							key="processing-visualization"
 						>
 							<Card className="w-full border border-border/40 bg-accent/30">
 								<CardContent className="p-0">
-									<StemsProcessingVisualization />
+									<StemsProcessingVisualization
+										mode={!stemsData || stemsData?.status === 'completed' ? 'loading' : 'processing'}
+									/>
 									<motion.div
 										className="text-center py-4"
 										initial={{ opacity: 0 }}
 										animate={{ opacity: 1 }}
 										transition={{ delay: 0.15, duration: 0.3 }}
 									>
-										<p className="text-sm">Separating stems from your audio</p>
-										<p className="text-xs text-muted-foreground">This process can take a few minutes.</p>
+										<p className="text-sm">
+											{!stemsData || stemsData?.status === 'completed'
+												? 'Preparing waveform players'
+												: 'Separating stems from your audio'}
+										</p>
+										<p className="text-xs text-muted-foreground">
+											{!stemsData || stemsData?.status === 'completed'
+												? 'Almost ready to play.'
+												: 'This process can take a few minutes.'}
+										</p>
 									</motion.div>
 								</CardContent>
 							</Card>
 						</motion.div>
 					)}
-				</AnimatePresence>
 
-				{/* Show stems players when ready */}
-				<AnimatePresence>
-					{stemsData?.status === 'completed' && stemsData.stems && Object.keys(stemsData.stems).length > 0 && (
-						<motion.div
-							className="grid gap-3 p-3 pb-8 overflow-y-auto"
-							variants={containerVariants}
-							initial="hidden"
-							animate="visible"
-							exit="exit"
-						>
-							{filteredStems.map(([stemName, stemUrl], index) => (
-								<motion.div
-									key={stemName}
-									variants={itemVariants}
-									transition={{ duration: 0.25, delay: index * 0.03 }}
-									layoutId={stemName}
-								>
-									<StemPlayer stemName={stemName} stemUrl={stemUrl} sessionId={sessionId} />
-								</motion.div>
-							))}
-						</motion.div>
+					{/* 3. Show stems players when ready */}
+					{stemsData?.status === 'completed' && stemsData.stems && Object.keys(stemsData.stems).length > 0 && waveformsReady && (
+						<div className="p-3 pb-8">
+							<motion.div
+								className="grid gap-3"
+								variants={containerVariants}
+								initial="hidden"
+								animate="visible"
+								exit="exit"
+								key="waveform-players-grid"
+								onAnimationStart={() => setIsTransitioning(true)}
+								onAnimationComplete={() => setIsTransitioning(false)}
+							>
+								{filteredStems.map(([stemName, stemUrl], index) => (
+									<motion.div
+										key={stemName}
+										variants={itemVariants}
+										transition={{ duration: 0.25, delay: index * 0.03 }}
+										layoutId={stemName}
+									>
+										<StemPlayer stemName={stemName} stemUrl={stemUrl} sessionId={sessionId} />
+									</motion.div>
+								))}
+							</motion.div>
+						</div>
 					)}
-				</AnimatePresence>
 
-				{/* Show error state if failed */}
-				<AnimatePresence>
+					{/* 4. Show error state if failed */}
 					{stemsData?.status === 'failed' && (
 						<motion.div
 							className="flex-1 flex items-center justify-center"
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
 							exit={{ opacity: 0 }}
 							transition={{ duration: 0.2 }}
+							key="error-state"
 						>
 							<Alert variant="destructive">
 								<AlertDescription>Stem separation failed. Please try uploading your audio again.</AlertDescription>
@@ -292,6 +364,21 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 						</motion.div>
 					)}
 				</AnimatePresence>
+
+				{/* Load stems in background to prepare them, but don't display yet */}
+				{stemsData?.status === 'completed' && stemsData.stems && Object.keys(stemsData.stems).length > 0 && !waveformsReady && (
+					<div className="hidden">
+						{stemItems.map(([stemName, stemUrl]) => (
+							<StemPlayer
+								key={stemName}
+								stemName={stemName}
+								stemUrl={stemUrl}
+								sessionId={sessionId}
+								onReady={handleWaveformReady}
+							/>
+						))}
+					</div>
+				)}
 			</div>
 		</div>
 	)

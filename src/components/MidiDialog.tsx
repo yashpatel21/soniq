@@ -85,7 +85,7 @@ export function MidiDialog({ open, onOpenChange, audioBuffer, stemName, stemColo
 					sourceId: 'midi-dialog',
 				})
 			)
-			console.log('MIDI dialog opened, dispatched pause event')
+			// console.log('MIDI dialog opened, dispatched pause event')
 			hasDispatchedEventRef.current = true
 		} else if (!open) {
 			// Reset the flag when dialog closes
