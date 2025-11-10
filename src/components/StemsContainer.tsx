@@ -51,7 +51,30 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 	// Get the stems data if available
 	const stemItems = stemsData?.stems ? Object.entries(stemsData.stems) : []
 
-	// Filter stems based on active filter
+	// Helper function to check if a stem should be visible based on active filter
+	const isStemVisible = React.useCallback(
+		(stemName: string) => {
+			if (!activeFilter) return true
+			return stemName.toLowerCase().includes(activeFilter.toLowerCase())
+		},
+		[activeFilter]
+	)
+
+	// Sort stems so visible ones appear first, but keep all items in the array
+	// This allows us to keep components mounted while removing hidden ones from layout
+	const sortedStemItems = React.useMemo(() => {
+		if (!activeFilter) return stemItems
+		// Sort: visible items first, then hidden items
+		return [...stemItems].sort(([nameA], [nameB]) => {
+			const visibleA = isStemVisible(nameA)
+			const visibleB = isStemVisible(nameB)
+			if (visibleA && !visibleB) return -1
+			if (!visibleA && visibleB) return 1
+			return 0
+		})
+	}, [stemItems, activeFilter, isStemVisible])
+
+	// Filter stems based on active filter (for counting visible items)
 	const filteredStems = React.useMemo(() => {
 		if (!activeFilter) return stemItems
 		return stemItems.filter(([name]) => name.toLowerCase().includes(activeFilter.toLowerCase()))
@@ -87,7 +110,12 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 
 	// Track loading of all waveforms
 	React.useEffect(() => {
-		if (stemsData?.status === 'completed' && stemItems.length > 0 && !initialLoadStarted && !bypassLoading) {
+		if (
+			stemsData?.status === 'completed' &&
+			stemItems.length > 0 &&
+			!initialLoadStarted &&
+			!bypassLoading
+		) {
 			setInitialLoadStarted(true)
 
 			// Reset counters
@@ -103,7 +131,14 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 
 			return () => clearTimeout(fallbackTimer)
 		}
-	}, [stemsData?.status, stemItems.length, initialLoadStarted, sessionId, bypassLoading, markSessionLoaded])
+	}, [
+		stemsData?.status,
+		stemItems.length,
+		initialLoadStarted,
+		sessionId,
+		bypassLoading,
+		markSessionLoaded,
+	])
 
 	// Function to handle when a waveform is ready
 	const handleWaveformReady = () => {
@@ -156,12 +191,6 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 		},
 	}
 
-	const itemVariants = {
-		hidden: { opacity: 0 },
-		visible: { opacity: 1, transition: { duration: 0.25 } },
-		exit: { opacity: 0, transition: { duration: 0.15 } },
-	}
-
 	// Show error message
 	if (isError) {
 		return (
@@ -179,8 +208,8 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 						<div>
 							<h1 className="text-4xl font-bold tracking-tight">Stems Separation</h1>
 							<p className="text-muted-foreground text-base leading-relaxed mt-2 max-w-2xl">
-								Split your track into individual stems. Isolate vocals, drums, bass, and more for remixing, sampling, or
-								creating acapellas.
+								Split your track into individual stems. Isolate vocals, drums, bass,
+								and more for remixing, sampling, or creating acapellas.
 							</p>
 						</div>
 					</div>
@@ -227,8 +256,8 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 						>
 							<h1 className="text-4xl font-bold tracking-tight">Stems Separation</h1>
 							<p className="text-muted-foreground text-base leading-relaxed mt-2 max-w-2xl">
-								Split your track into individual stems. Isolate vocals, drums, bass, and more for remixing, sampling, or
-								creating acapellas.
+								Split your track into individual stems. Isolate vocals, drums, bass,
+								and more for remixing, sampling, or creating acapellas.
 							</p>
 						</motion.div>
 					</div>
@@ -260,12 +289,22 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 									</Button>
 								</motion.div>
 								{stemTypes.map((type) => (
-									<motion.div key={type} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+									<motion.div
+										key={type}
+										whileHover={{ scale: 1.05 }}
+										whileTap={{ scale: 0.95 }}
+									>
 										<Button
 											size="sm"
-											variant={activeFilter === type ? 'secondary' : 'outline'}
+											variant={
+												activeFilter === type ? 'secondary' : 'outline'
+											}
 											className="h-7 px-2 text-xs rounded-sm"
-											onClick={() => handleFilterChange(activeFilter === type ? null : type)}
+											onClick={() =>
+												handleFilterChange(
+													activeFilter === type ? null : type
+												)
+											}
 											disabled={isTransitioning}
 										>
 											{type}
@@ -286,7 +325,9 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 										className="text-xs py-1 rounded-full bg-primary/5 border-primary/20 text-foreground hover:bg-primary/10 transition-colors ml-2"
 									>
 										<Music className="h-3 w-3 text-primary mr-1" />
-										<span className="font-medium">{Object.keys(stemsData.stems).length} stems</span>
+										<span className="font-medium">
+											{Object.keys(stemsData.stems).length} stems
+										</span>
 									</Badge>
 								</motion.div>
 							)}
@@ -306,7 +347,9 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 				<AnimatePresence mode="wait">
 					{/* 1 & 2. Processing/Loading visualization states - Skip if we've already loaded before */}
 					{!bypassLoading &&
-						(!stemsData || stemsData?.status === 'processing' || (stemsData?.status === 'completed' && !waveformsReady)) && (
+						(!stemsData ||
+							stemsData?.status === 'processing' ||
+							(stemsData?.status === 'completed' && !waveformsReady)) && (
 							<motion.div
 								className="flex-1 p-3 pb-8"
 								initial={{ opacity: 0 }}
@@ -318,7 +361,11 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 								<Card className="w-full border border-border/40 bg-accent/30">
 									<CardContent className="p-0">
 										<StemsProcessingVisualization
-											mode={!stemsData || stemsData?.status === 'completed' ? 'loading' : 'processing'}
+											mode={
+												!stemsData || stemsData?.status === 'completed'
+													? 'loading'
+													: 'processing'
+											}
 										/>
 										<motion.div
 											className="text-center py-4"
@@ -342,7 +389,7 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 							</motion.div>
 						)}
 
-					{/* 3. Show stems players when ready */}
+					{/* 3. Show stems players when ready - Always render all stems, just hide/show them */}
 					{stemsData?.status === 'completed' &&
 						stemsData.stems &&
 						Object.keys(stemsData.stems).length > 0 &&
@@ -355,19 +402,32 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 									animate="visible"
 									exit="exit"
 									key="waveform-players-grid"
-									onAnimationStart={() => setIsTransitioning(true)}
-									onAnimationComplete={() => setIsTransitioning(false)}
 								>
-									{filteredStems.map(([stemName, stemUrl], index) => (
-										<motion.div
-											key={stemName}
-											variants={itemVariants}
-											transition={{ duration: 0.25, delay: index * 0.03 }}
-											layoutId={stemName}
-										>
-											<StemPlayer stemName={stemName} stemUrl={stemUrl} sessionId={sessionId} />
-										</motion.div>
-									))}
+									{sortedStemItems.map(([stemName, stemUrl]) => {
+										const visible = isStemVisible(stemName)
+										return (
+											<motion.div
+												key={stemName}
+												animate={{
+													opacity: visible ? 1 : 0,
+												}}
+												initial={{ opacity: 1 }}
+												transition={{ duration: 0.2 }}
+												style={{
+													// Use display: none to remove from layout flow
+													// React keeps components mounted, preventing waveform reloads
+													display: visible ? 'block' : 'none',
+													pointerEvents: visible ? 'auto' : 'none',
+												}}
+											>
+												<StemPlayer
+													stemName={stemName}
+													stemUrl={stemUrl}
+													sessionId={sessionId}
+												/>
+											</motion.div>
+										)
+									})}
 								</motion.div>
 							</div>
 						)}
@@ -383,7 +443,9 @@ export function StemsContainer({ stemsData, isLoading, isError, sessionId }: Ste
 							key="error-state"
 						>
 							<Alert variant="destructive">
-								<AlertDescription>Stem separation failed. Please try uploading your audio again.</AlertDescription>
+								<AlertDescription>
+									Stem separation failed. Please try uploading your audio again.
+								</AlertDescription>
 							</Alert>
 						</motion.div>
 					)}

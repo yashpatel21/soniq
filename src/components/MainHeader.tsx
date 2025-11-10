@@ -9,7 +9,7 @@ interface MainHeaderProps {
 	isBlurred?: boolean
 }
 
-export function MainHeader({ title = 'SonIQ', subtitle = 'Your Music, Our Magic', isSticky = true, isBlurred = false }: MainHeaderProps) {
+export function MainHeader({ title = 'SonIQ', subtitle = 'Your Music, Our Magic.', isSticky = true, isBlurred = false }: MainHeaderProps) {
 	return (
 		<header
 			className={cn(
