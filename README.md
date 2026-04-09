@@ -4,7 +4,7 @@ SonIQ is an advanced audio processing web application that allows users to analy
 
 ## Live Demo
 
-**Live Deployment**: [https://soniq-production.up.railway.app/](https://soniq-production.up.railway.app/)
+**Live Deployment**: [https://soniq-production.up.railway.app/](https://soniq-production.up.railway.app/) **(migrating live deployment, link currently down)**
 
 Try out SonIQ's features in the live environment where you can upload your audio files for analysis, stem separation, and MIDI extraction.
 
